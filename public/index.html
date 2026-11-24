@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio de vida de anaquel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Plan: herramienta de trabajo de laboratorio; barra de pestañas por etapa (simular → datos → modelo → optimizar → referencia); panel de controles a la izquierda, resultados a la derecha. Acento azul maíz. */
+:root{
+  --bg:#f4f5f8; --surface:#ffffff; --surface-2:#eceef4; --line:#d7dbe5;
+  --ink:#141826; --ink-2:#4a5068; --ink-3:#737990;
+  --accent:#3340a0; --accent-soft:#e3e6f7; --accent-ink:#ffffff;
+  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a;
+  --good:#1d7a3a; --good-bg:#e2f3e7; --warn:#8a5a00; --warn-bg:#fbf0d9; --bad:#b3261e; --bad-bg:#fbe7e5;
+  --font-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body:"IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --radius:8px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11131b; --surface:#191c27; --surface-2:#222636; --line:#323750;
+    --ink:#eceef6; --ink-2:#b4b9cd; --ink-3:#8a90a8;
+    --accent:#8f9bf0; --accent-soft:#262c4d; --accent-ink:#11131b;
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+    --good:#6fd08f; --good-bg:#16301f; --warn:#f0c062; --warn-bg:#352a12; --bad:#f28b82; --bad-bg:#3a1a18;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11131b; --surface:#191c27; --surface-2:#222636; --line:#323750;
+  --ink:#eceef6; --ink-2:#b4b9cd; --ink-3:#8a90a8;
+  --accent:#8f9bf0; --accent-soft:#262c4d; --accent-ink:#11131b;
+  --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+  --good:#6fd08f; --good-bg:#16301f; --warn:#f0c062; --warn-bg:#352a12; --bad:#f28b82; --bad-bg:#3a1a18;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+h1{font-size:26px;font-weight:800;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:700}
+h3{font-size:15px;font-weight:700}
+p{margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 20px 48px}
+header.top{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.sub{color:var(--ink-2);font-size:14px}
+.note{font-size:13px;color:var(--warn);background:var(--warn-bg);padding:6px 10px;border-radius:6px;max-width:520px}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:16px 0 18px}
+nav.tabs button{font:600 14px var(--font-body);color:var(--ink-2);background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
+nav.tabs button .n{font-family:var(--font-mono);color:var(--ink-3);margin-right:6px}
+nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+nav.tabs button[aria-selected="true"] .n{color:inherit;opacity:.8}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel-grid{display:grid;grid-template-columns:320px 1fr;gap:18px;align-items:start}
+.panel-grid>*{min-width:0}
+@media (max-width:860px){.panel-grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.lead{color:var(--ink-2);max-width:75ch;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label,.lbl{font-size:13px;font-weight:600;color:var(--ink-2)}
+.field .val{font-family:var(--font-mono);font-size:12px;color:var(--ink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+select,input[type=number],input[type=text],textarea{font:14px var(--font-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.check small{color:var(--ink-3);display:block;font-size:12px}
+.btn{font:600 14px var(--font-body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:9px 14px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.tile .k{font-size:12px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tile .v{font-family:var(--font-display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile .d{font-size:13px;color:var(--ink-2)}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+td .chip{white-space:normal}
+.chip.good{color:var(--good);background:var(--good-bg)}
+.chip.warn{color:var(--warn);background:var(--warn-bg)}
+.chip.bad{color:var(--bad);background:var(--bad-bg)}
+.chip.neutral{color:var(--ink-2);background:var(--surface-2)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink-2);background:var(--surface-2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+tr.hi td{background:var(--accent-soft)}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto}
+.chart .axis text{fill:var(--ink-3);font:11px var(--font-body)}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.chart .lab{fill:var(--ink-2);font:12px var(--font-body)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:6px;white-space:nowrap;display:none;z-index:5}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.muted{color:var(--ink-3);font-size:13px}
+.formula{font-family:var(--font-mono);font-size:13px;background:var(--surface-2);padding:10px 12px;border-radius:6px;overflow-x:auto;white-space:pre}
+.feat-list{display:grid;grid-template-columns:1fr;gap:6px}
+.hidden{display:none !important}
+.sep{border:0;border-top:1px solid var(--line);margin:4px 0}
+.msg{font-size:13px;padding:8px 10px;border-radius:6px}
+.msg.warn{color:var(--warn);background:var(--warn-bg)}
+.msg.bad{color:var(--bad);background:var(--bad-bg)}
+.msg.good{color:var(--good);background:var(--good-bg)}
+.steps{margin:0;padding-left:20px;color:var(--ink-2);font-size:14px}
+.steps li{margin-bottom:4px}
+.tools{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.tools .team{min-width:200px}
+.note-s{font-size:12px;color:var(--ink-3);margin-top:8px}
+.stepper{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:16px 0 8px}
+.step{display:flex;gap:10px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font:inherit;color:var(--ink);min-width:0}
+.step .dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--font-mono);background:var(--surface-2);color:var(--ink-2);flex:none}
+.step .dot svg{width:16px;height:16px}
+.step .t{display:block;font:700 14px var(--font-display)}
+.step .s{display:block;font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step[aria-current="step"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.step[aria-current="step"] .dot{background:var(--accent);color:var(--accent-ink)}
+.step.done .dot{background:var(--good);color:var(--surface)}
+.step.locked{opacity:.5;cursor:not-allowed}
+@media (max-width:760px){.step{justify-content:center;padding:8px}.step .t,.step .s{display:none}}
+.progress{height:5px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-bottom:16px}
+.progress>i{display:block;height:100%;background:var(--accent);width:0;transition:width .5s ease}
+.mission{background:var(--accent-soft);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--radius);padding:14px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr auto;gap:10px 24px;align-items:center}
+@media (max-width:760px){.mission{grid-template-columns:1fr}}
+.mission .eyebrow{font:600 12px var(--font-mono);color:var(--accent);letter-spacing:.05em;text-transform:uppercase}
+.mission h2{font-size:21px;margin:2px 0 4px}
+.mission p{color:var(--ink-2);max-width:75ch}
+.tasks{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+.tasks li{display:flex;gap:7px;align-items:center;color:var(--ink-2)}
+.tasks .bx{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--ink-3);display:grid;place-items:center;flex:none;background:var(--surface)}
+.tasks .bx svg{width:11px;height:11px;opacity:0}
+.tasks li.ok{color:var(--ink)}
+.tasks li.ok .bx{background:var(--good);border-color:var(--good)}
+.tasks li.ok .bx svg{opacity:1}
+.btn.big{padding:12px 18px;font-size:15px}
+.help{width:18px;height:18px;border-radius:50%;border:1px solid var(--ink-3);background:var(--surface);color:var(--ink-2);font:700 11px/16px var(--font-body);cursor:pointer;padding:0;margin-left:5px;vertical-align:1px;flex:none}
+.help:hover,.help[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+.pop{position:absolute;z-index:30;max-width:320px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(10,14,40,.22);padding:10px 12px;font-size:13px;line-height:1.45;display:none}
+.pop b{display:block;font-family:var(--font-display);font-size:14px;margin-bottom:3px}
+.bagrow{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:1000px){.bagrow{grid-template-columns:1fr}}
+.bag{display:flex;flex-direction:column;gap:8px}
+.bag svg{width:100%;max-width:230px;display:block;margin:0 auto}
+.bag .read{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.bag .day{font:800 22px var(--font-display);font-variant-numeric:tabular-nums}
+.play{display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap}
+.play .btn{padding:7px 12px;min-width:110px}
+.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr));align-content:start}
+.pbar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.pbar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .15s linear}
+.hypbox{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;margin-top:8px}
+.score-big{font:800 72px/1 var(--font-display);font-variant-numeric:tabular-nums;color:var(--accent)}
+.score-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;font-size:14px}
+.score-row .pbar{grid-column:1/-1}
+.score-row .pbar>i{background:var(--series-3)}
+.score-row.neg .pbar>i{background:var(--bad)}
+.rk-pos{font:800 16px var(--font-display);width:28px;display:inline-grid;place-items:center}
+tr.me td{background:var(--accent-soft)}
+.empty{border:1px dashed var(--line);border-radius:var(--radius);padding:18px;color:var(--ink-2);background:var(--surface)}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}.fade{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div>
+    <h1>Laboratorio de vida de anaquel</h1>
+    <p class="sub">Predicción con IA para optimizar materiales de envase · Tecnología del Envase y Embalaje · ITS Teziutlán</p>
+  </div>
+  <div class="tools">
+    <div class="field team"><label for="team">Equipo</label><input type="text" id="team" maxlength="40" placeholder="Nombre de tu equipo" autocomplete="off"></div>
+    <div class="field" id="code-f" hidden style="min-width:160px"><label for="rk-code">Código de la clase</label><input type="text" id="rk-code" maxlength="40" autocomplete="off" placeholder="Te lo da tu docente"></div>
+    <label class="check"><input type="checkbox" id="teacher"><span>Modo docente<small>Desbloquea todas las etapas</small></span></label>
+    <button class="btn ghost" id="go-ref">Ayuda y datos</button>
+  </div>
+</header>
+<p class="note-s">Datos ilustrativos tomados de rangos típicos de literatura. Para decisiones reales, calíbrelos con datos de laboratorio en Ayuda y datos.</p>
+
+<nav class="stepper" aria-label="Misiones del laboratorio">
+  <button class="step" data-view="sim" data-n="1"><span class="dot">1</span><span style="min-width:0"><span class="t">Explorar</span><span class="s">Simulador físico</span></span></button>
+  <button class="step" data-view="datos" data-n="2"><span class="dot">2</span><span style="min-width:0"><span class="t">Ensayar</span><span class="s">Datos de laboratorio</span></span></button>
+  <button class="step" data-view="modelo" data-n="3"><span class="dot">3</span><span style="min-width:0"><span class="t">Entrenar</span><span class="s">Modelo predictivo</span></span></button>
+  <button class="step" data-view="opt" data-n="4"><span class="dot">4</span><span style="min-width:0"><span class="t">Decidir</span><span class="s">Optimizar material</span></span></button>
+  <button class="step" data-view="rank" data-n="5"><span class="dot">5</span><span style="min-width:0"><span class="t">Resultados</span><span class="s">Puntaje y ranking</span></span></button>
+</nav>
+<div class="progress" aria-hidden="true"><i id="prog"></i></div>
+<section id="mission" class="mission" aria-live="polite"></section>
+
+<!-- ============ 1 SIMULADOR ============ -->
+<section id="view-sim">
+  <div class="panel-grid">
+    <div class="card stack">
+      <div class="field"><label for="s-prod">Producto</label><select id="s-prod"></select></div>
+      <div class="field"><label for="s-mat">Material</label><select id="s-mat"></select></div>
+      <div class="field"><label for="s-f">Calibre de la capa de barrera <span class="val" id="s-f-v"></span></label><input type="range" id="s-f" min="0.5" max="3" step="0.25" value="1"></div>
+      <div class="row2">
+        <div class="field"><label for="s-mass">Contenido (g)</label><input type="number" id="s-mass" min="20" max="5000" step="10"></div>
+        <div class="field"><label for="s-n2">Atmósfera</label><select id="s-n2"><option value="0">Aire</option><option value="1">Barrido con N₂</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="s-w">Ancho bolsa (cm)</label><input type="number" id="s-w" min="5" max="60" step="0.5"></div>
+        <div class="field"><label for="s-h">Alto bolsa (cm)</label><input type="number" id="s-h" min="5" max="80" step="0.5"></div>
+      </div>
+      <hr class="sep">
+      <div class="field"><label for="s-clim">Clima de almacenamiento</label><select id="s-clim"></select></div>
+      <div class="field"><label for="s-T">Temperatura <span class="val" id="s-T-v"></span></label><input type="range" id="s-T" min="5" max="40" step="1"></div>
+      <div class="field"><label for="s-HR">Humedad relativa <span class="val" id="s-HR-v"></span></label><input type="range" id="s-HR" min="20" max="95" step="1"></div>
+      <div class="btns"><button class="btn" id="s-add">Agregar a la comparación</button></div>
+    </div>
+    <div class="stack">
+      <div class="bagrow">
+        <div class="card bag">
+          <h3>La bolsa por dentro</h3>
+          <div id="s-bag"></div>
+          <div class="read"><span class="day" id="bag-day">Día 0</span><span id="bag-status"></span></div>
+          <div class="muted" id="bag-m"></div>
+          <div class="field"><label for="s-day" class="lbl">Avanzar en el tiempo</label><input type="range" id="s-day" min="0" max="100" step="1" value="0"></div>
+          <div class="play"><button class="btn" id="s-play">Reproducir</button><span class="muted">Azul: vapor de agua · Naranja: oxígeno</span></div>
+        </div>
+        <div class="tiles two" id="s-tiles"></div>
+      </div>
+      <div class="card">
+        <h3>Humedad del producto en el tiempo</h3>
+        <p class="muted" id="s-chart-cap"></p>
+        <div class="chart" id="s-chart"></div>
+      </div>
+      <div class="card stack">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+          <h3>Comparación de configuraciones</h3>
+          <div class="btns"><button class="btn ghost" id="s-copy">Copiar tabla</button><button class="btn ghost" id="s-clear">Vaciar</button></div>
+        </div>
+        <div class="tablewrap"><table id="s-cmp"></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2 ENSAYOS ============ -->
+<section id="view-datos" class="hidden">
+  <div class="panel-grid">
+    <div class="card stack">
+      <div class="field"><label for="d-hyp">Tu hipótesis: ¿qué variable influye más en la vida de anaquel?</label><select id="d-hyp"><option value="">Elige una variable…</option></select></div>
+      <hr class="sep">
+      <div class="field"><label for="d-n">Número de ensayos <span class="val" id="d-n-v"></span></label><input type="range" id="d-n" min="30" max="800" step="10" value="250"></div>
+      <div class="field"><label for="d-noise">Error experimental <span class="val" id="d-noise-v"></span></label><input type="range" id="d-noise" min="0" max="40" step="1" value="10"></div>
+      <div class="row2">
+        <div class="field"><label for="d-tmin">T mínima (°C)</label><input type="number" id="d-tmin" value="10" min="0" max="45"></div>
+        <div class="field"><label for="d-tmax">T máxima (°C)</label><input type="number" id="d-tmax" value="35" min="0" max="45"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="d-hmin">HR mínima (%)</label><input type="number" id="d-hmin" value="30" min="10" max="98"></div>
+        <div class="field"><label for="d-hmax">HR máxima (%)</label><input type="number" id="d-hmax" value="90" min="10" max="98"></div>
+      </div>
+      <div class="field"><span class="lbl">Materiales ensayados <button class="help" data-help="matens" aria-label="Ayuda: materiales ensayados">?</button></span><div id="d-mats" class="feat-list"></div><span class="muted">Los materiales sin marcar no se ensayan: sirven para probar si el modelo predice bien algo que nunca vio.</span></div>
+      <div class="field"><label for="d-seed">Semilla aleatoria</label><input type="number" id="d-seed" value="2026"></div>
+      <div class="btns"><button class="btn" id="d-gen">Generar ensayos</button><button class="btn ghost" id="d-copy">Copiar CSV</button></div>
+    </div>
+    <div class="stack">
+      <div class="tiles" id="d-tiles"></div>
+      <div class="card stack">
+        <h3>Vista previa de los ensayos</h3>
+        <p class="muted">Primeras 12 filas. "Color de impresión" y "Lote" no influyen en la vida de anaquel: están ahí para practicar la selección de variables.</p>
+        <div class="tablewrap"><table id="d-table"></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3 MODELO ============ -->
+<section id="view-modelo" class="hidden">
+  <div class="panel-grid">
+    <div class="card stack">
+      <div class="field"><span class="lbl">Variables de entrada <button class="help" data-help="variables" aria-label="Ayuda: variables de entrada">?</button></span><div id="m-feats" class="feat-list"></div></div>
+      <label class="check"><input type="checkbox" id="m-log" checked><span>Predecir el logaritmo de los días <button class="help" data-help="log" aria-label="Ayuda: logaritmo">?</button><small>La vida de anaquel varía en órdenes de magnitud; el logaritmo suele ayudar.</small></span></label>
+      <hr class="sep">
+      <div class="field"><label for="m-alg">Algoritmo</label>
+        <select id="m-alg">
+          <option value="lin">Regresión lineal múltiple</option>
+          <option value="tree">Árbol de decisión</option>
+          <option value="rf" selected>Bosque aleatorio</option>
+          <option value="knn">k vecinos más cercanos</option>
+        </select>
+      </div>
+      <div id="m-hp" class="stack"></div>
+      <hr class="sep">
+      <div class="field"><label for="m-val">Validación</label>
+        <select id="m-val"><option value="holdout">Separar entrenamiento y prueba</option><option value="cv">Validación cruzada k-fold</option></select>
+      </div>
+      <div class="field" id="m-split-f"><label for="m-split">Porcentaje para prueba <span class="val" id="m-split-v"></span></label><input type="range" id="m-split" min="10" max="50" step="5" value="25"></div>
+      <div class="field hidden" id="m-k-f"><label for="m-k">Número de pliegues <span class="val" id="m-k-v"></span></label><input type="range" id="m-k" min="3" max="10" step="1" value="5"></div>
+      <div class="btns"><button class="btn big" id="m-train">Entrenar y validar</button></div>
+      <div class="pbar" id="m-pbar" hidden><i id="m-pbar-i"></i></div>
+      <p class="muted" id="m-status"></p>
+    </div>
+    <div class="stack">
+      <div class="tiles" id="m-tiles"></div>
+      <div class="card">
+        <h3>Predicho contra medido <button class="help" data-help="predmed" aria-label="Ayuda: predicho contra medido">?</button></h3>
+        <p class="muted" id="m-sc-cap">Entrene un modelo para ver sus predicciones. Los puntos sobre la diagonal son predicciones perfectas.</p>
+        <div class="chart" id="m-scatter"></div>
+        <div class="legend" id="m-sc-leg"></div>
+      </div>
+      <div class="card">
+        <h3>Importancia de las variables <button class="help" data-help="importancia" aria-label="Ayuda: importancia">?</button></h3>
+        <p class="muted">Cuánto empeora el error del modelo si se revuelven al azar los valores de cada variable.</p>
+        <div class="chart" id="m-imp"></div>
+        <div class="hypbox" id="m-hyp"></div>
+      </div>
+      <div class="card">
+        <h3>Comparación de tus modelos</h3>
+        <p class="muted">Error típico de cada modelo. Si la barra de entrenamiento es mucho más corta que la de prueba, el modelo memorizó.</p>
+        <div class="chart" id="m-cmp"></div>
+        <div class="legend" id="m-cmp-leg"></div>
+      </div>
+      <div class="card stack">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+          <h3>Bitácora de experimentos <button class="help" data-help="campeon" aria-label="Ayuda: modelo campeón">?</button></h3>
+          <button class="btn ghost" id="m-copy">Copiar bitácora</button>
+        </div>
+        <div class="tablewrap"><table id="m-log-t"></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 OPTIMIZAR ============ -->
+<section id="view-opt" class="hidden">
+  <div class="panel-grid">
+    <div class="card stack">
+      <div class="field"><label for="o-reto">Escenario</label><select id="o-reto"></select></div>
+      <p class="muted" id="o-reto-d"></p>
+      <div class="field"><label for="o-prod">Producto</label><select id="o-prod"></select></div>
+      <div class="row2">
+        <div class="field"><label for="o-mass">Contenido (g)</label><input type="number" id="o-mass" min="20" max="5000" step="10"></div>
+        <div class="field"><label for="o-n2">Atmósfera</label><select id="o-n2"><option value="0">Aire</option><option value="1">Barrido con N₂</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="o-w">Ancho (cm)</label><input type="number" id="o-w" min="5" max="60" step="0.5"></div>
+        <div class="field"><label for="o-h">Alto (cm)</label><input type="number" id="o-h" min="5" max="80" step="0.5"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="o-T">T (°C)</label><input type="number" id="o-T" min="0" max="45"></div>
+        <div class="field"><label for="o-HR">HR (%)</label><input type="number" id="o-HR" min="10" max="98"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="o-meta">Meta (días)</label><input type="number" id="o-meta" min="7" max="1095"></div>
+        <div class="field"><label for="o-margin">Margen de seguridad (%)</label><input type="number" id="o-margin" min="0" max="100" value="0"></div>
+      </div>
+      <div class="field"><label for="o-eol">Fin de vida aceptado</label><select id="o-eol"><option value="all">Cualquiera</option><option value="green">Solo reciclable o compostable</option></select></div>
+      <div class="field"><label for="o-model">Modelo a usar</label><select id="o-model"></select></div>
+      <div class="btns"><button class="btn big" id="o-run">Predecir y ordenar opciones</button></div>
+    </div>
+    <div class="stack">
+      <div class="tiles" id="o-tiles"></div>
+      <div class="card stack">
+        <h3>Costo contra vida de anaquel predicha</h3>
+        <p class="muted">Cada punto es una combinación de material y calibre. Las mejores opciones quedan a la derecha de la meta y lo más abajo posible.</p>
+        <div class="chart" id="o-chart"></div>
+        <div class="legend" id="o-leg"></div>
+      </div>
+      <div class="card stack">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+          <h3>Opciones ordenadas</h3>
+          <div class="btns"><button class="btn" id="o-reveal" disabled>Revelar resultado real</button><button class="btn ghost" id="o-copy">Copiar tabla</button></div>
+        </div>
+        <p class="muted" id="o-hint">Marca tu elección en la primera columna y escribe tu justificación: después se habilita Revelar resultado real.</p>
+        <div class="tablewrap"><table id="o-table"></table></div>
+        <div class="field"><label for="o-just">Justificación de la decisión</label><textarea id="o-just" rows="3" placeholder="Material y calibre elegidos, por qué, y qué tanto confía en la predicción."></textarea></div>
+        <div id="o-verdict"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 RESULTADOS ============ -->
+<section id="view-rank" class="hidden">
+  <div class="panel-grid" style="grid-template-columns:minmax(0,360px) minmax(0,1fr)">
+    <div class="card stack" id="rk-score"></div>
+    <div class="stack">
+      <div class="card stack">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+          <h3>Ranking de equipos</h3>
+          <div class="field" style="min-width:220px"><label for="rk-scen" class="lbl">Escenario</label><select id="rk-scen"></select></div>
+        </div>
+        <p class="muted" id="rk-status">Conectando…</p>
+        <div class="btns"><button class="btn" id="rk-publish" hidden>Publicar mi resultado</button></div>
+        <div class="tablewrap"><table id="rk-table"></table></div>
+      </div>
+      <div class="card stack">
+        <h3>Consolidar resultados (docente)</h3>
+        <p class="muted">Si el ranking no está en línea (por ejemplo, al abrir la página desde un archivo), cada equipo presiona "Copiar mi resultado" y te lo envía. Pega aquí todas las líneas, una por equipo, para armar el ranking en esta pantalla.</p>
+        <textarea id="rk-paste" rows="4" placeholder="LABVA|Equipo Maíz|r1|78|BOPP metalizado 20 µm|1|M3 · Bosque aleatorio|1795440000000"></textarea>
+        <div class="btns"><button class="btn ghost" id="rk-add">Agregar al ranking</button><button class="btn ghost" id="rk-clear">Borrar ranking local</button></div>
+        <div class="stack" id="rk-admin" hidden style="gap:8px">
+          <hr class="sep">
+          <div class="field" style="max-width:280px"><label for="rk-admin-code">Código de administrador</label><input type="password" id="rk-admin-code" autocomplete="off"></div>
+          <div class="btns"><button class="btn ghost" id="rk-wipe">Borrar el ranking en línea de este grupo</button></div>
+        </div>
+        <div id="rk-msg"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 REFERENCIA ============ -->
+<section id="view-ref" class="hidden">
+  <div class="stack">
+    <div class="card stack">
+      <h2>Materiales</h2>
+      <p class="muted">WVTR medida a 38 °C y 90 % HR; OTR a 23 °C y 0 % HR, ambas para el espesor de referencia. Valores y costos ilustrativos: edítelos en la tabla o cargue un CSV con fichas técnicas de proveedores.</p>
+      <div class="btns">
+        <label class="btn" for="r-mat-file" tabindex="0">Cargar CSV de materiales</label>
+        <input type="file" id="r-mat-file" accept=".csv,text/csv,text/plain" class="hidden">
+        <button class="btn ghost" id="r-mat-copy">Copiar CSV actual</button>
+        <button class="btn ghost" id="r-mat-add">Agregar fila</button>
+        <button class="btn ghost" id="r-mat-reset">Restablecer originales</button>
+      </div>
+      <div id="r-mat-msg"></div>
+      <div class="tablewrap"><table id="r-mats"></table></div>
+    </div>
+    <div class="card stack">
+      <h2>Productos</h2>
+      <p class="muted">Humedades en base seca (g agua / g sólidos). Isoterma lineal: humedad = m₀ + b · aw. Escriba aquí sus datos de laboratorio o cargue un CSV; el simulador, los ensayos y la optimización los usan de inmediato.</p>
+      <div class="btns">
+        <label class="btn" for="r-prod-file" tabindex="0">Cargar CSV de productos</label>
+        <input type="file" id="r-prod-file" accept=".csv,text/csv,text/plain" class="hidden">
+        <button class="btn ghost" id="r-prod-copy">Copiar CSV actual</button>
+        <button class="btn ghost" id="r-prod-add">Agregar fila</button>
+        <button class="btn ghost" id="r-reset">Restablecer originales</button>
+      </div>
+      <div id="r-prod-msg"></div>
+      <div class="tablewrap"><table id="r-prods"></table></div>
+    </div>
+    <div class="card stack">
+      <h2>Formato de los archivos CSV</h2>
+      <p>La primera fila lleva los nombres de columna; el orden no importa. Se aceptan separadores coma o punto y coma (como guarda Excel en español), y decimales con punto o, si el separador es punto y coma, con coma. Cargar un CSV reemplaza la tabla completa y borra los ensayos y modelos ya hechos, porque dependen de la lista anterior.</p>
+      <h3>Materiales</h3>
+      <div class="formula">nombre,espesor_um,wvtr,otr,costo_m2,fin_de_vida,clase
+BOPP 20 µm,20,5.5,1700,3.0,Reciclable; acopio limitado,reciclable
+BOPP metalizado 20 µm,20,0.4,40,4.5,Difícil de reciclar,dificil</div>
+      <p class="muted">wvtr en g/m²·día (38 °C, 90 % HR); otr en cm³/m²·día·atm (23 °C, 0 % HR); costo_m2 en MXN. clase: reciclable, compostable, dificil o no_reciclable (si falta, se deduce de fin_de_vida).</p>
+      <h3>Productos</h3>
+      <div class="formula">nombre,humedad_inicial,humedad_critica,m0,b,tmax_oxidacion,umbral_oxidacion,contenido_g,ancho_cm,alto_cm
+Pinole de maíz azul,0.055,0.10,0.03,0.18,365,80,250,15,20</div>
+      <p class="muted">Humedades en base seca como fracción (0.055). Si las escribe en porcentaje (5.5), se convierten solas. tmax_oxidacion: días de estabilidad oxidativa a 25 °C con barrera perfecta; umbral_oxidacion: carga de oxígeno a la que la vida por oxidación se reduce a la mitad.</p>
+      <div class="btns"><button class="btn ghost" id="r-tpl-mat">Copiar plantilla de materiales</button><button class="btn ghost" id="r-tpl-prod">Copiar plantilla de productos</button></div>
+    </div>
+    <div class="card stack">
+      <h2>Climas</h2>
+      <div class="tablewrap"><table id="r-clims"></table></div>
+      <p class="muted">Condiciones promedio aproximadas e ilustrativas, para ejercicios.</p>
+    </div>
+    <div class="card stack">
+      <h2>Modelo físico que genera los ensayos</h2>
+      <p>Vida por humedad (modelo logarítmico con isoterma lineal):</p>
+      <div class="formula">t_humedad = [ b · Ws / (P · A · p₀(T)) ] · ln[ (me − mi) / (me − mc) ]
+me = m₀ + b · HR/100        P = WVTR_ref / (p₀(38 °C) · 0.9) · (1 / calibre)</div>
+      <p>Vida por oxidación (índice empírico ilustrativo):</p>
+      <div class="formula">t_oxidación = t_máx · 2^((25 − T)/10) · (1.6 si N₂) · U / (U + OTR_T · A / M)
+OTR_T = OTR_ref · (1 / calibre) · exp[ 3608 · (1/296.15 − 1/(T + 273.15)) ]</div>
+      <p>Vida de anaquel = el menor de los dos tiempos, con tope de 1095 días (3 años). Ws: sólidos secos (g); A: área de la bolsa, dos caras (m²); M: contenido (kg); p₀: presión de vapor del agua (kPa); U: umbral de oxidación del producto.</p>
+      <p class="muted">Supuestos: humedad uniforme en el producto, permeabilidad que escala con el inverso del calibre, sin sellos defectuosos, sin absorción de luz. Es un modelo didáctico: la IA lo trata como "la realidad" que debe aprender a partir de ensayos con error.</p>
+    </div>
+    <div class="card stack">
+      <h2>Cómo leer las métricas</h2>
+      <ol class="steps">
+        <li><b>R²</b> (en escala logarítmica): 1 es perfecto; 0 equivale a predecir siempre el promedio.</li>
+        <li><b>Error típico</b>: mediana del error porcentual absoluto en días. Un 15 % significa que la mitad de las predicciones fallan por menos de 15 %.</li>
+        <li><b>Entrenamiento contra prueba</b>: si el modelo es mucho mejor en entrenamiento que en prueba, está memorizando (sobreajuste).</li>
+        <li><b>Extrapolación</b>: una predicción fuera del rango de los ensayos (otro clima, un material no ensayado) no es confiable aunque las métricas sean buenas.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+</div>
+<div class="tip" id="tip"></div>
+<div class="pop" id="pop" role="dialog" aria-live="polite"></div>
+
+<script>
+"use strict";
+// ---------------- Datos base (ilustrativos) ----------------
+const MATERIALS_DEFAULT = [
+  {id:"pebd",  name:"PEBD 50 µm", th:50, wvtr:8,    otr:3800, cost:2.5,  eol:"Reciclable (monomaterial PE)", cls:"good"},
+  {id:"bopp",  name:"BOPP 20 µm", th:20, wvtr:5.5,  otr:1700, cost:3.0,  eol:"Reciclable; acopio limitado", cls:"good"},
+  {id:"boppm", name:"BOPP metalizado 20 µm", th:20, wvtr:0.4, otr:40, cost:4.5, eol:"Difícil de reciclar", cls:"warn"},
+  {id:"petpe", name:"PET 12 / PEBD 50", th:12, wvtr:6, otr:110, cost:6.0, eol:"No reciclable (multicapa)", cls:"bad"},
+  {id:"petal", name:"PET 12 / Al 9 / PEBD 50", th:9, wvtr:0.05, otr:0.1, cost:11.0, eol:"No reciclable (multicapa con aluminio)", cls:"bad"},
+  {id:"kraft", name:"Kraft / PEBD 25", th:25, wvtr:15, otr:6000, cost:7.0, eol:"Difícil (papel con plástico)", cls:"warn"},
+  {id:"pla",   name:"PLA 30 µm", th:30, wvtr:120, otr:600, cost:9.0, eol:"Compostable industrial", cls:"good"}
+];
+const MATERIALS = JSON.parse(JSON.stringify(MATERIALS_DEFAULT));
+const PRODUCTS_DEFAULT = [
+  {id:"pinole", name:"Pinole de maíz azul", mi:0.055, mc:0.10, m0:0.03, b:0.18, tmax:365, thr:80,  mass:250, w:15, h:20},
+  {id:"cafe",   name:"Café molido",         mi:0.03,  mc:0.06, m0:0.01, b:0.12, tmax:450, thr:2,   mass:500, w:14, h:24},
+  {id:"totopo", name:"Totopos",             mi:0.02,  mc:0.05, m0:0.005,b:0.12, tmax:240, thr:150, mass:200, w:18, h:25},
+  {id:"grillo", name:"Harina de grillo",    mi:0.05,  mc:0.10, m0:0.02, b:0.20, tmax:300, thr:40,  mass:250, w:15, h:20}
+];
+let PRODUCTS = JSON.parse(JSON.stringify(PRODUCTS_DEFAULT));
+const CLIMATES = [
+  {id:"tez", name:"Teziutlán, Pue.", T:15, HR:85},
+  {id:"pue", name:"Puebla, Pue.", T:17, HR:60},
+  {id:"cdmx",name:"Ciudad de México", T:17, HR:55},
+  {id:"ver", name:"Veracruz puerto", T:26, HR:78},
+  {id:"mer", name:"Mérida, Yuc.", T:27, HR:70},
+  {id:"mty", name:"Monterrey, N.L.", T:23, HR:62},
+  {id:"alm", name:"Almacén climatizado", T:20, HR:50},
+  {id:"acc", name:"Prueba acelerada", T:38, HR:90}
+];
+const RETOS = [
+  {id:"r1", name:"Pinole para tiendas de Teziutlán", prod:"pinole", mass:250, w:15, h:20, clim:"tez", meta:180, eol:"all", d:"Una cooperativa quiere vender pinole de maíz azul en la región con al menos 6 meses de vida de anaquel al menor costo."},
+  {id:"r2", name:"Pinole para Veracruz puerto", prod:"pinole", mass:250, w:15, h:20, clim:"ver", meta:180, eol:"all", d:"El mismo pinole, ahora para un clima cálido y húmedo. ¿Sirve el mismo envase?"},
+  {id:"r3", name:"Café molido para la Ciudad de México", prod:"cafe", mass:500, w:14, h:24, clim:"cdmx", meta:270, eol:"all", d:"Café de la sierra para venta en autoservicio, 9 meses de vida de anaquel."},
+  {id:"r4", name:"Harina de grillo para Mérida, envase sustentable", prod:"grillo", mass:250, w:15, h:20, clim:"mer", meta:120, eol:"green", d:"El cliente exige un envase reciclable o compostable. Si ninguna opción cumple, argumente qué cambiaría."},
+  {id:"libre", name:"Escenario libre", prod:"pinole", mass:250, w:15, h:20, clim:"pue", meta:180, eol:"all", d:"Defina usted el producto, el clima y la meta."}
+];
+const CALIBRES = [0.5,1,1.5,2,2.5];
+const CAP = 1095;
+
+// ---------------- Utilidades ----------------
+const $ = id => document.getElementById(id);
+const fmt = (x, d=0) => Number.isFinite(x) ? x.toLocaleString("es-MX",{minimumFractionDigits:d,maximumFractionDigits:d}) : "—";
+const prodById = id => PRODUCTS.find(p=>p.id===id);
+const matById = id => MATERIALS.find(m=>m.id===id);
+function p0(T){ return 0.61078*Math.exp(17.27*T/(T+237.3)); }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function gauss(r){ let u=0,v=0; while(u===0)u=r(); while(v===0)v=r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function daysText(t){ if(!Number.isFinite(t) || t>=CAP) return "≥ 3 años"; if(t<1) return "< 1 día"; return fmt(t)+" días"; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function copyText(txt, btn){
+  const done = ok => { const o=btn.textContent; btn.textContent = ok?"Copiado":"No se pudo copiar"; setTimeout(()=>btn.textContent=o,1500); };
+  try{ navigator.clipboard.writeText(txt).then(()=>done(true),()=>done(false)); }catch(e){ done(false); }
+}
+function tableToTSV(tbl){ return [...tbl.querySelectorAll("tr")].map(tr=>[...tr.children].map(c=>c.innerText.replace(/\s+/g," ").trim()).join("\t")).join("\n"); }
+
+// ---------------- Modelo físico ----------------
+function physics(c){
+  const p = prodById(c.prod), m = matById(c.mat);
+  const A = 2*c.w*c.h/1e4;                       // m²
+  const Ws = c.mass/(1+p.mi);                    // g sólidos secos
+  const P = (m.wvtr/c.f)/(p0(38)*0.9);           // g/(m²·d·kPa)
+  const K = P*A*p0(c.T)/(p.b*Ws);                // 1/d
+  const me = p.m0 + p.b*c.HR/100;
+  let tH;
+  if(p.mi>=p.mc) tH = 0; else if(me<=p.mc) tH = Infinity; else tH = Math.log((me-p.mi)/(me-p.mc))/K;
+  const otrT = (m.otr/c.f)*Math.exp(3608.4*(1/296.15 - 1/(c.T+273.15)));
+  const F = otrT*A/(c.mass/1000);
+  const tmaxT = p.tmax*Math.pow(2,(25-c.T)/10)*(c.n2?1.6:1);
+  const tO = tmaxT*p.thr/(p.thr+F);
+  const t = Math.min(tH,tO);
+  const cost = m.cost*A*(0.4+0.6*c.f);
+  return {A,Ws,K,me,mi:p.mi,mc:p.mc,tH,tO,t:Math.min(t,CAP),tRaw:t,limit: tH<=tO?"Humedad":"Oxidación",cost};
+}
+
+// ---------------- Gráficas SVG ----------------
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
+function niceTicks(min,max,n){ const span=max-min; if(span<=0) return [min]; const step0=span/n; const mag=Math.pow(10,Math.floor(Math.log10(step0))); const err=step0/mag; const step=(err>=7.5?10:err>=3.5?5:err>=1.5?2:1)*mag; const out=[]; for(let v=Math.ceil(min/step)*step; v<=max+1e-9; v+=step) out.push(+v.toFixed(10)); return out; }
+const LOGTICKS=[1,3,7,15,30,60,90,180,365,730,1095];
+const tip=$("tip");
+function showTip(container,x,y,html){ const r=container.getBoundingClientRect(); tip.innerHTML=html; tip.style.display="block"; const tw=tip.offsetWidth; let left=r.left+window.scrollX+x+12; if(left+tw>window.scrollX+document.documentElement.clientWidth-8) left=r.left+window.scrollX+x-tw-12; tip.style.left=left+"px"; tip.style.top=(r.top+window.scrollY+y-10)+"px"; }
+function hideTip(){ tip.style.display="none"; }
+
+function drawMoisture(c,res){
+  const box=$("s-chart"); box.innerHTML="";
+  const W=720,H=300,ml=52,mr=150,mt=16,mb=40;
+  const tEnd = Math.min(CAP, Math.max(30, (Number.isFinite(res.tRaw)? res.tRaw:CAP)*1.4));
+  const mEnd = res.me - (res.me-res.mi)*Math.exp(-res.K*tEnd);
+  const ymax = Math.max(res.mc, mEnd, res.mi)*100*1.15, ymin=Math.max(0,Math.min(res.mi*100*0.8, res.mc*100*0.6));
+  const sx=t=>ml+(W-ml-mr)*t/tEnd, sy=v=>mt+(H-mt-mb)*(1-(v-ymin)/(ymax-ymin));
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Curva de humedad del producto contra días"},box);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  niceTicks(ymin,ymax,5).forEach(v=>{ el("line",{x1:ml,x2:W-mr,y1:sy(v),y2:sy(v)},g); el("text",{x:ml-6,y:sy(v)+4,"text-anchor":"end"},ax).textContent=fmt(v,1)+" %"; });
+  niceTicks(0,tEnd,6).forEach(v=>{ el("text",{x:sx(v),y:H-mb+16,"text-anchor":"middle"},ax).textContent=fmt(v); });
+  el("text",{x:(ml+W-mr)/2,y:H-6,"text-anchor":"middle",class:"lab"},svg).textContent="Días de almacenamiento";
+  // crítica
+  el("line",{x1:ml,x2:W-mr,y1:sy(res.mc*100),y2:sy(res.mc*100),stroke:"var(--bad)","stroke-width":1.5,"stroke-dasharray":"5 4"},svg);
+  el("text",{x:W-mr+6,y:sy(res.mc*100)+4,class:"lab"},svg).textContent="Humedad crítica "+fmt(res.mc*100,1)+" %";
+  // oxidación
+  if(Number.isFinite(res.tO) && res.tO<tEnd){ el("line",{x1:sx(res.tO),x2:sx(res.tO),y1:mt,y2:H-mb,stroke:"var(--series-2)","stroke-width":1.5,"stroke-dasharray":"5 4"},svg); el("text",{x:sx(res.tO)+4,y:mt+12,class:"lab"},svg).textContent="Límite por oxidación"; }
+  // curva
+  let d=""; const N=120; for(let i=0;i<=N;i++){ const t=tEnd*i/N; const m=res.me-(res.me-res.mi)*Math.exp(-res.K*t); d+=(i?"L":"M")+sx(t).toFixed(1)+","+sy(m*100).toFixed(1); }
+  el("path",{d,fill:"none",stroke:"var(--series-1)","stroke-width":2.5},svg);
+  const endM=mEnd*100; el("text",{x:W-mr+6,y:Math.min(H-mb,Math.max(mt+10,sy(endM)+4)),class:"lab"},svg).textContent="Producto";
+  if(Number.isFinite(res.tH) && res.tH<=tEnd){ el("circle",{cx:sx(res.tH),cy:sy(res.mc*100),r:5,fill:"var(--series-1)",stroke:"var(--surface)","stroke-width":2},svg); }
+  // hover
+  const dayLine=el("line",{y1:mt,y2:H-mb,stroke:"var(--accent)","stroke-width":2},svg);
+  const dayDot=el("circle",{r:6,fill:"var(--accent)",stroke:"var(--surface)","stroke-width":2},svg);
+  SIM.tEnd=tEnd;
+  SIM.setDay=t=>{ const m=res.me-(res.me-res.mi)*Math.exp(-res.K*t); dayLine.setAttribute("x1",sx(t)); dayLine.setAttribute("x2",sx(t)); dayDot.setAttribute("cx",sx(t)); dayDot.setAttribute("cy",sy(m*100)); };
+  const cross=el("line",{y1:mt,y2:H-mb,stroke:"var(--ink-3)","stroke-width":1,visibility:"hidden"},svg);
+  const dot=el("circle",{r:4,fill:"var(--series-1)",stroke:"var(--surface)","stroke-width":2,visibility:"hidden"},svg);
+  const hit=el("rect",{x:ml,y:mt,width:W-ml-mr,height:H-mt-mb,fill:"transparent",style:"cursor:pointer"},svg);
+  hit.addEventListener("click",ev=>{ const r=svg.getBoundingClientRect(); const px=(ev.clientX-r.left)*W/r.width; setSimDay(Math.max(0,Math.min(tEnd,(px-ml)/(W-ml-mr)*tEnd))); });
+  hit.addEventListener("mousemove",ev=>{ const r=svg.getBoundingClientRect(); const px=(ev.clientX-r.left)*W/r.width; const t=Math.max(0,Math.min(tEnd,(px-ml)/(W-ml-mr)*tEnd)); const m=res.me-(res.me-res.mi)*Math.exp(-res.K*t); cross.setAttribute("x1",sx(t)); cross.setAttribute("x2",sx(t)); cross.setAttribute("visibility","visible"); dot.setAttribute("cx",sx(t)); dot.setAttribute("cy",sy(m*100)); dot.setAttribute("visibility","visible"); showTip(box,sx(t)*r.width/W,sy(m*100)*r.height/H,`Día ${fmt(t)}<br>Humedad ${fmt(m*100,2)} % b.s.`); });
+  hit.addEventListener("mouseleave",()=>{ cross.setAttribute("visibility","hidden"); dot.setAttribute("visibility","hidden"); hideTip(); });
+}
+
+function logScale(v,a,b){ const lv=Math.log10(Math.max(v,0.5)); return a+(b-a)*(lv-Math.log10(0.8))/(Math.log10(1400)-Math.log10(0.8)); }
+function drawScatter(box, pts){
+  // pts: {real,pred,group,label}
+  box.innerHTML="";
+  const W=560,H=380,ml=56,mr=16,mt=12,mb=44;
+  const sx=v=>logScale(v,ml,W-mr), sy=v=>logScale(v,H-mb,mt);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Vida de anaquel predicha contra medida, escala logarítmica"},box);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  LOGTICKS.forEach(v=>{ el("line",{x1:ml,x2:W-mr,y1:sy(v),y2:sy(v)},g); el("line",{x1:sx(v),x2:sx(v),y1:mt,y2:H-mb},g); el("text",{x:ml-6,y:sy(v)+4,"text-anchor":"end"},ax).textContent=fmt(v); el("text",{x:sx(v),y:H-mb+15,"text-anchor":"middle"},ax).textContent=fmt(v); });
+  el("text",{x:(ml+W-mr)/2,y:H-8,"text-anchor":"middle",class:"lab"},svg).textContent="Vida medida (días, escala log)";
+  const yl=el("text",{x:14,y:(mt+H-mb)/2,"text-anchor":"middle",class:"lab",transform:`rotate(-90 14 ${(mt+H-mb)/2})`},svg); yl.textContent="Vida predicha (días)";
+  el("line",{x1:sx(0.8),y1:sy(0.8),x2:sx(1400),y2:sy(1400),stroke:"var(--ink-3)","stroke-width":1,"stroke-dasharray":"4 4"},svg);
+  const colors={0:"var(--series-1)",1:"var(--series-2)"};
+  const circles=[];
+  pts.forEach(p=>{ const c=el("circle",{cx:sx(p.real),cy:sy(p.pred),r:4,fill:colors[p.group],"fill-opacity":0.75,stroke:"var(--surface)","stroke-width":1},svg); circles.push([sx(p.real),sy(p.pred),p]); });
+  const hit=el("rect",{x:ml,y:mt,width:W-ml-mr,height:H-mt-mb,fill:"transparent"},svg);
+  hit.addEventListener("mousemove",ev=>{ const r=svg.getBoundingClientRect(); const px=(ev.clientX-r.left)*W/r.width, py=(ev.clientY-r.top)*H/r.height; let best=null,bd=144; circles.forEach(c=>{ const d=(c[0]-px)**2+(c[1]-py)**2; if(d<bd){bd=d;best=c;} }); if(best){ const p=best[2]; showTip(box,best[0]*r.width/W,best[1]*r.height/H,`${esc(p.label)}<br>Medida ${daysText(p.real)} · Predicha ${daysText(p.pred)}`);} else hideTip(); });
+  hit.addEventListener("mouseleave",hideTip);
+}
+function drawBars(box, items){
+  box.innerHTML="";
+  const W=560,rowH=28,ml=190,mr=60,mt=6; const H=mt+items.length*rowH+6;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Importancia relativa de cada variable"},box);
+  const max=Math.max(...items.map(i=>i.v),1e-9);
+  items.forEach((it,i)=>{ const y=mt+i*rowH; el("text",{x:ml-8,y:y+17,"text-anchor":"end",class:"lab"},svg).textContent=it.name; const w=Math.max(2,(W-ml-mr)*it.v/max); el("rect",{x:ml,y:y+6,width:w,height:14,rx:3,fill:"var(--series-1)"},svg); el("text",{x:ml+w+6,y:y+17,class:"lab"},svg).textContent=fmt(it.v,0)+" %"; });
+}
+function drawCostChart(box, rows, meta){
+  box.innerHTML="";
+  const W=640,H=320,ml=60,mr=16,mt=14,mb=44;
+  const costs=rows.map(r=>r.cost); const cmax=Math.max(...costs)*1.1;
+  const sx=v=>logScale(v,ml,W-mr), sy=v=>mt+(H-mt-mb)*(1-v/cmax);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Costo por envase contra vida de anaquel predicha"},box);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  LOGTICKS.forEach(v=>{ el("line",{x1:sx(v),x2:sx(v),y1:mt,y2:H-mb},g); el("text",{x:sx(v),y:H-mb+15,"text-anchor":"middle"},ax).textContent=fmt(v); });
+  niceTicks(0,cmax,5).forEach(v=>{ el("line",{x1:ml,x2:W-mr,y1:sy(v),y2:sy(v)},g); el("text",{x:ml-6,y:sy(v)+4,"text-anchor":"end"},ax).textContent="$"+fmt(v,2); });
+  el("text",{x:(ml+W-mr)/2,y:H-8,"text-anchor":"middle",class:"lab"},svg).textContent="Vida de anaquel predicha (días, escala log)";
+  const yl=el("text",{x:14,y:(mt+H-mb)/2,"text-anchor":"middle",class:"lab",transform:`rotate(-90 14 ${(mt+H-mb)/2})`},svg); yl.textContent="Costo de material por envase (MXN)";
+  el("line",{x1:sx(meta),x2:sx(meta),y1:mt,y2:H-mb,stroke:"var(--bad)","stroke-width":1.5,"stroke-dasharray":"5 4"},svg);
+  el("text",{x:sx(meta)+4,y:mt+12,class:"lab"},svg).textContent="Meta "+fmt(meta)+" d";
+  const pts=[];
+  rows.forEach(r=>{ const col=r.chosen?"var(--series-3)":(r.extrap?"var(--series-2)":"var(--series-1)"); const c=el("circle",{cx:sx(r.pred),cy:sy(r.cost),r:r.chosen?7:5,fill:col,"fill-opacity":0.85,stroke:"var(--surface)","stroke-width":2},svg); pts.push([sx(r.pred),sy(r.cost),r]); });
+  const hit=el("rect",{x:ml,y:mt,width:W-ml-mr,height:H-mt-mb,fill:"transparent"},svg);
+  hit.addEventListener("mousemove",ev=>{ const rr=svg.getBoundingClientRect(); const px=(ev.clientX-rr.left)*W/rr.width, py=(ev.clientY-rr.top)*H/rr.height; let best=null,bd=144; pts.forEach(c=>{ const d=(c[0]-px)**2+(c[1]-py)**2; if(d<bd){bd=d;best=c;} }); if(best){ const r=best[2]; showTip(box,best[0]*rr.width/W,best[1]*rr.height/H,`${esc(r.mat.name)} · calibre ×${fmt(r.f,1)}<br>Predicha ${daysText(r.pred)} · $${fmt(r.cost,2)}`);} else hideTip(); });
+  hit.addEventListener("mouseleave",hideTip);
+}
+
+// ---------------- 1 Simulador ----------------
+function fillSelect(sel, items, val){ sel.innerHTML=items.map(i=>`<option value="${i.id}">${esc(i.name)}</option>`).join(""); if(val!==undefined) sel.value=val; }
+function simCfg(){ return {prod:$("s-prod").value, mat:$("s-mat").value, f:+$("s-f").value, mass:+$("s-mass").value, w:+$("s-w").value, h:+$("s-h").value, T:+$("s-T").value, HR:+$("s-HR").value, n2:$("s-n2").value==="1"}; }
+function loadProdDefaults(prefix, pid){ const p=prodById(pid); $(prefix+"-mass").value=p.mass; $(prefix+"-w").value=p.w; $(prefix+"-h").value=p.h; }
+const cmpRows=[];
+function renderSim(){
+  const c=simCfg(), m=matById(c.mat);
+  $("s-f-v").textContent=`×${fmt(c.f,2)} ≈ ${fmt(m.th*c.f)} µm`;
+  $("s-T-v").textContent=c.T+" °C"; $("s-HR-v").textContent=c.HR+" %";
+  if(!(c.mass>0&&c.w>0&&c.h>0)) return;
+  const r=physics(c);
+  $("s-tiles").innerHTML=`
+    <div class="tile"><div class="k">Vida de anaquel ${H("vida")}</div><div class="v">${daysText(r.tRaw)}</div><div class="d">${r.t<CAP?"≈ "+fmt(r.t/30.4,1)+" meses":"tope del modelo"}</div></div>
+    <div class="tile"><div class="k">Factor limitante ${H("limitante")}</div><div class="v" style="font-size:22px">${r.limit}</div><div class="d">Humedad: ${daysText(r.tH)} · Oxidación: ${daysText(r.tO)}</div></div>
+    <div class="tile"><div class="k">Costo de material</div><div class="v">$${fmt(r.cost,2)}</div><div class="d">Área ${fmt(r.A*1e4)} cm² (dos caras)</div></div>
+    <div class="tile"><div class="k">Fin de vida ${H("fin")}</div><div style="margin-top:6px"><span class="chip ${m.cls}">${esc(m.eol)}</span></div></div>`;
+  $("s-chart-cap").innerHTML = (r.me<=r.mc ? `En este clima el producto se equilibra en ${fmt(r.me*100,1)} % de humedad, por debajo de la crítica: la humedad nunca limita.` : `Humedad de equilibrio con el ambiente: ${fmt(r.me*100,1)} % b.s. Haz clic en la gráfica para mover el día.`) + " " + H("humcrit");
+  drawMoisture(c,r);
+  SIM.c=c; SIM.r=r; buildBag(c,r);
+  stopPlay(); const sd=$("s-day"); sd.max=Math.round(SIM.tEnd); sd.value=0; setSimDay(0);
+  updateMissions();
+}
+function renderCmp(){
+  updateMissions();
+  const t=$("s-cmp");
+  if(!cmpRows.length){ t.innerHTML=`<tr><td class="muted">Agregue configuraciones para compararlas lado a lado.</td></tr>`; return; }
+  t.innerHTML=`<tr><th>Producto</th><th>Material</th><th class="num">Calibre</th><th class="num">g</th><th>Clima</th><th class="num">Vida (días)</th><th>Limitante</th><th class="num">Costo</th><th>Fin de vida</th><th></th></tr>`+
+    cmpRows.map((r,i)=>`<tr><td>${esc(r.prod)}</td><td>${esc(r.mat)}</td><td class="num">×${fmt(r.f,2)}</td><td class="num">${fmt(r.mass)}</td><td>${r.T} °C, ${r.HR} %${r.n2?", N₂":""}</td><td class="num">${r.t>=CAP?"≥ 1 095":fmt(r.t)}</td><td>${r.limit}</td><td class="num">$${fmt(r.cost,2)}</td><td>${esc(r.eol)}</td><td><button class="btn ghost" style="padding:2px 8px" data-del="${i}" aria-label="Quitar fila">Quitar</button></td></tr>`).join("");
+}
+
+// ---------------- 2 Ensayos ----------------
+const COLORS=["Blanco","Kraft natural","Negro","Azul"];
+let DATA=null;   // {rows, unseen, cfg}
+function genRow(r, matsAllowed, cfg){
+  const p=PRODUCTS[Math.floor(r()*PRODUCTS.length)];
+  const m=matsAllowed[Math.floor(r()*matsAllowed.length)];
+  const c={prod:p.id, mat:m.id, f:0.5+r()*2, mass:Math.round(p.mass*(0.5+r()*1.5)), w:+(10+r()*15).toFixed(1), h:+(12+r()*18).toFixed(1), T:+(cfg.tmin+r()*(cfg.tmax-cfg.tmin)).toFixed(1), HR:+(cfg.hmin+r()*(cfg.hmax-cfg.hmin)).toFixed(1), n2:r()<0.3};
+  const ph=physics(c);
+  const y=Math.min(CAP, Math.max(0.5, ph.t*Math.exp(cfg.noise*gauss(r))));
+  return Object.assign(c,{color:COLORS[Math.floor(r()*4)], lote:1+Math.floor(r()*20), y:+y.toFixed(1), truth:ph.t});
+}
+function generate(){
+  const cfg={n:+$("d-n").value, noise:+$("d-noise").value/100, tmin:+$("d-tmin").value, tmax:+$("d-tmax").value, hmin:+$("d-hmin").value, hmax:+$("d-hmax").value, seed:+$("d-seed").value};
+  if(cfg.tmax<cfg.tmin) [cfg.tmin,cfg.tmax]=[cfg.tmax,cfg.tmin];
+  if(cfg.hmax<cfg.hmin) [cfg.hmin,cfg.hmax]=[cfg.hmax,cfg.hmin];
+  const allowed=MATERIALS.filter(m=>$("d-mat-"+m.id).checked);
+  const excluded=MATERIALS.filter(m=>!$("d-mat-"+m.id).checked);
+  if(!allowed.length){ $("d-tiles").innerHTML=`<p class="msg bad">Marque al menos un material para ensayar.</p>`; return; }
+  const r=mulberry32(cfg.seed);
+  const rows=[]; for(let i=0;i<cfg.n;i++) rows.push(genRow(r,allowed,cfg));
+  const unseen=[]; if(excluded.length){ const n2=Math.max(40,Math.round(cfg.n/4)); for(let i=0;i<n2;i++) unseen.push(genRow(r,excluded,cfg)); }
+  DATA={rows,unseen,cfg,allowed:allowed.map(m=>m.id),excluded:excluded.map(m=>m.id)};
+  renderData();
+}
+function renderData(){
+  updateMissions();
+  if(!DATA){ $("d-tiles").innerHTML=`<div class="empty">Aún no hay ensayos. Ajusta los controles de la izquierda y presiona <b>Generar ensayos</b>.</div>`; $("d-table").innerHTML=""; return; }
+  const ys=DATA.rows.map(r=>r.y).sort((a,b)=>a-b); const med=ys[Math.floor(ys.length/2)];
+  const capped=DATA.rows.filter(r=>r.y>=CAP).length;
+  $("d-tiles").innerHTML=`
+    <div class="tile fade"><div class="k">Ensayos</div><div class="v">${fmt(DATA.rows.length)}</div><div class="d">${DATA.allowed.length} de ${MATERIALS.length} materiales</div></div>
+    <div class="tile"><div class="k">Vida mediana</div><div class="v">${fmt(med)}</div><div class="d">días</div></div>
+    <div class="tile"><div class="k">Llegaron al tope</div><div class="v">${fmt(capped)}</div><div class="d">ensayos ≥ 3 años</div></div>
+    <div class="tile"><div class="k">Condiciones</div><div class="v" style="font-size:18px">${DATA.cfg.tmin}–${DATA.cfg.tmax} °C</div><div class="d">${DATA.cfg.hmin}–${DATA.cfg.hmax} % HR · error ${fmt(DATA.cfg.noise*100)} %</div></div>`;
+  $("d-table").innerHTML=`<tr><th>Producto</th><th>Material</th><th class="num">Calibre</th><th class="num">g</th><th class="num">cm</th><th class="num">T °C</th><th class="num">HR %</th><th>N₂</th><th>Color</th><th class="num">Lote</th><th class="num">Vida medida (d)</th></tr>`+
+    DATA.rows.slice(0,12).map(r=>`<tr><td>${esc(prodById(r.prod).name)}</td><td>${esc(matById(r.mat).name)}</td><td class="num">×${fmt(r.f,2)}</td><td class="num">${fmt(r.mass)}</td><td class="num">${fmt(r.w,1)}×${fmt(r.h,1)}</td><td class="num">${fmt(r.T,1)}</td><td class="num">${fmt(r.HR,1)}</td><td>${r.n2?"Sí":"No"}</td><td>${r.color}</td><td class="num">${r.lote}</td><td class="num">${fmt(r.y,1)}</td></tr>`).join("");
+  $("m-status").textContent=`Datos listos: ${DATA.rows.length} ensayos.`;
+}
+function dataCSV(){
+  if(!DATA) return "";
+  const h="producto,material,calibre,contenido_g,ancho_cm,alto_cm,area_m2,T_C,HR_pct,N2,color,lote,vida_medida_dias";
+  return h+"\n"+DATA.rows.map(r=>[prodById(r.prod).name,matById(r.mat).name,r.f.toFixed(2),r.mass,r.w,r.h,(2*r.w*r.h/1e4).toFixed(4),r.T,r.HR,r.n2?1:0,r.color,r.lote,r.y].join(",")).join("\n");
+}
+
+// ---------------- 3 Modelo ----------------
+const FEATS=[
+  {id:"wvtr", name:"WVTR del material", def:true, d:"Permeabilidad al vapor de agua, ajustada por calibre (ln)"},
+  {id:"otr",  name:"OTR del material",  def:true, d:"Permeabilidad al oxígeno, ajustada por calibre (ln)"},
+  {id:"cal",  name:"Calibre", def:true, d:"Múltiplo del espesor de referencia"},
+  {id:"am",   name:"Área / contenido", def:true, d:"m² de envase por kg de producto"},
+  {id:"T",    name:"Temperatura", def:true, d:"°C de almacenamiento"},
+  {id:"HR",   name:"Humedad relativa", def:true, d:"% del ambiente"},
+  {id:"n2",   name:"Atmósfera con N₂", def:true, d:"Sí / no"},
+  {id:"prod", name:"Producto", def:true, d:"Tipo de alimento"},
+  {id:"cw",   name:"Carga de humedad", def:false, d:"Variable derivada: ln(WVTR × área / contenido)"},
+  {id:"co",   name:"Carga de oxígeno", def:false, d:"Variable derivada: ln(OTR × área / contenido)"},
+  {id:"color",name:"Color de impresión", def:false, d:"Variable irrelevante"},
+  {id:"lote", name:"Lote", def:false, d:"Variable irrelevante"}
+];
+function featVector(r, sel){
+  const m=matById(r.mat), v=[];
+  for(const f of sel){
+    if(f==="wvtr") v.push(Math.log(m.wvtr/r.f));
+    else if(f==="otr") v.push(Math.log(m.otr/r.f));
+    else if(f==="cal") v.push(r.f);
+    else if(f==="am") v.push(2*r.w*r.h/1e4/(r.mass/1000));
+    else if(f==="T") v.push(r.T);
+    else if(f==="HR") v.push(r.HR);
+    else if(f==="n2") v.push(r.n2?1:0);
+    else if(f==="prod") PRODUCTS.forEach(p=>v.push(r.prod===p.id?1:0));
+    else if(f==="cw") v.push(Math.log(m.wvtr/r.f*(2*r.w*r.h/1e4)/(r.mass/1000)));
+    else if(f==="co") v.push(Math.log(m.otr/r.f*(2*r.w*r.h/1e4)/(r.mass/1000)));
+    else if(f==="color") COLORS.forEach(c=>v.push(r.color===c?1:0));
+    else if(f==="lote") v.push(r.lote);
+  }
+  return v;
+}
+function featGroups(sel){ const g=[]; let i=0; for(const f of sel){ const w = f==="prod"?PRODUCTS.length : f==="color"?COLORS.length : 1; g.push({id:f,name:FEATS.find(x=>x.id===f).name,cols:Array.from({length:w},(_,k)=>i+k)}); i+=w; } return g; }
+
+// Estandarización
+function stdFit(X){ const p=X[0].length, mu=Array(p).fill(0), sd=Array(p).fill(0); X.forEach(x=>x.forEach((v,j)=>mu[j]+=v)); mu.forEach((v,j)=>mu[j]=v/X.length); X.forEach(x=>x.forEach((v,j)=>sd[j]+=(v-mu[j])**2)); sd.forEach((v,j)=>sd[j]=Math.sqrt(v/X.length)||1); return {mu,sd}; }
+const stdApply=(x,s)=>x.map((v,j)=>(v-s.mu[j])/s.sd[j]);
+// Regresión lineal (ridge pequeño)
+function fitLinear(X,y,hp){
+  const s=stdFit(X); const Z=X.map(x=>[1,...stdApply(x,s)]); const p=Z[0].length; const lam=hp.ridge;
+  const A=Array.from({length:p},()=>Array(p).fill(0)), b=Array(p).fill(0);
+  Z.forEach((z,i)=>{ for(let a=0;a<p;a++){ b[a]+=z[a]*y[i]; for(let c=0;c<p;c++) A[a][c]+=z[a]*z[c]; } });
+  for(let a=1;a<p;a++) A[a][a]+=lam;
+  // Gauss
+  for(let i=0;i<p;i++){ let mx=i; for(let k=i+1;k<p;k++) if(Math.abs(A[k][i])>Math.abs(A[mx][i])) mx=k; [A[i],A[mx]]=[A[mx],A[i]]; [b[i],b[mx]]=[b[mx],b[i]]; const piv=A[i][i]||1e-12; for(let k=i+1;k<p;k++){ const f=A[k][i]/piv; for(let c=i;c<p;c++) A[k][c]-=f*A[i][c]; b[k]-=f*b[i]; } }
+  const w=Array(p).fill(0); for(let i=p-1;i>=0;i--){ let sum=b[i]; for(let c=i+1;c<p;c++) sum-=A[i][c]*w[c]; w[i]=sum/(A[i][i]||1e-12); }
+  return {predict:x=>{ const z=[1,...stdApply(x,s)]; return z.reduce((a,v,j)=>a+v*w[j],0); }};
+}
+// Árbol de regresión (CART)
+function buildTree(X,y,idx,depth,hp,r){
+  const n=idx.length; let mean=0; idx.forEach(i=>mean+=y[i]); mean/=n;
+  if(depth>=hp.depth || n<2*hp.leaf) return {v:mean};
+  const p=X[0].length; let feats=[...Array(p).keys()];
+  if(hp.mtry && hp.mtry<p){ for(let i=p-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [feats[i],feats[j]]=[feats[j],feats[i]]; } feats=feats.slice(0,hp.mtry); }
+  let best=null; let tot=0,tot2=0; idx.forEach(i=>{tot+=y[i];tot2+=y[i]*y[i];}); const baseSSE=tot2-tot*tot/n;
+  for(const f of feats){
+    const ord=idx.slice().sort((a,b)=>X[a][f]-X[b][f]);
+    let ls=0,ls2=0;
+    for(let k=0;k<n-1;k++){
+      const yi=y[ord[k]]; ls+=yi; ls2+=yi*yi; const nl=k+1, nr=n-nl;
+      if(nl<hp.leaf || nr<hp.leaf) continue;
+      const xv=X[ord[k]][f], xn=X[ord[k+1]][f]; if(xv===xn) continue;
+      const rs=tot-ls, rs2=tot2-ls2;
+      const sse=(ls2-ls*ls/nl)+(rs2-rs*rs/nr);
+      if(!best || sse<best.sse) best={sse,f,thr:(xv+xn)/2};
+    }
+  }
+  if(!best || best.sse>=baseSSE-1e-12) return {v:mean};
+  const L=[],R=[]; idx.forEach(i=>(X[i][best.f]<=best.thr?L:R).push(i));
+  return {f:best.f,t:best.thr,l:buildTree(X,y,L,depth+1,hp,r),r:buildTree(X,y,R,depth+1,hp,r)};
+}
+function treePred(node,x){ while(node.v===undefined) node = x[node.f]<=node.t?node.l:node.r; return node.v; }
+function fitTree(X,y,hp,seed){ const r=mulberry32(seed); const root=buildTree(X,y,[...X.keys()],0,hp,r); return {predict:x=>treePred(root,x)}; }
+function fitForest(X,y,hp,seed){
+  const r=mulberry32(seed); const p=X[0].length; const mtry=Math.max(1,Math.ceil(p/3)); const trees=[];
+  for(let t=0;t<hp.trees;t++){ const idx=[]; for(let i=0;i<X.length;i++) idx.push(Math.floor(r()*X.length)); trees.push(buildTree(X,y,idx,0,{depth:hp.depth,leaf:hp.leaf,mtry},r)); }
+  return {predict:x=>trees.reduce((a,tr)=>a+treePred(tr,x),0)/trees.length};
+}
+function fitKNN(X,y,hp){ const s=stdFit(X); const Z=X.map(x=>stdApply(x,s)); return {predict:x=>{ const z=stdApply(x,s); const d=Z.map((zz,i)=>[zz.reduce((a,v,j)=>a+(v-z[j])**2,0),i]); d.sort((a,b)=>a[0]-b[0]); const k=Math.min(hp.k,d.length); let sum=0; for(let i=0;i<k;i++) sum+=y[d[i][1]]; return sum/k; }}; }
+function fitModel(alg,X,y,hp,seed){ if(alg==="lin") return fitLinear(X,y,hp); if(alg==="tree") return fitTree(X,y,hp,seed); if(alg==="rf") return fitForest(X,y,hp,seed); return fitKNN(X,y,hp); }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function fitForestAsync(X,y,hp,seed,tick){
+  const r=mulberry32(seed); const p=X[0].length; const mtry=Math.max(1,Math.ceil(p/3)); const trees=[];
+  for(let t=0;t<hp.trees;t++){ const idx=[]; for(let i=0;i<X.length;i++) idx.push(Math.floor(r()*X.length)); trees.push(buildTree(X,y,idx,0,{depth:hp.depth,leaf:hp.leaf,mtry},r)); tick(1); if(t%3===2) await sleep(0); }
+  return {predict:x=>trees.reduce((a,tr)=>a+treePred(tr,x),0)/trees.length};
+}
+async function fitModelA(alg,X,y,hp,seed,tick){ if(alg==="rf") return fitForestAsync(X,y,hp,seed,tick); const m=fitModel(alg,X,y,hp,seed); tick(1); await sleep(REDUCED?0:140); return m; }
+
+const HP={
+  lin:[{id:"ridge",name:"Regularización (ridge)",min:0,max:50,step:0.5,val:0.5,d:"Penaliza coeficientes grandes; reduce sobreajuste."}],
+  tree:[{id:"depth",name:"Profundidad máxima",min:1,max:20,step:1,val:6,d:"Más profundidad = reglas más finas, más riesgo de memorizar."},{id:"leaf",name:"Ensayos mínimos por hoja",min:1,max:40,step:1,val:5,d:"Hojas con pocos ensayos siguen al ruido."}],
+  rf:[{id:"trees",name:"Número de árboles",min:5,max:150,step:5,val:50,d:"Más árboles = predicción más estable, más lenta."},{id:"depth",name:"Profundidad máxima",min:1,max:20,step:1,val:10,d:"Profundidad de cada árbol."},{id:"leaf",name:"Ensayos mínimos por hoja",min:1,max:40,step:1,val:3,d:"Tamaño mínimo de cada grupo final."}],
+  knn:[{id:"k",name:"Número de vecinos (k)",min:1,max:40,step:1,val:7,d:"Pocos vecinos siguen al ruido; muchos suavizan de más."}]
+};
+function renderHP(){
+  const alg=$("m-alg").value;
+  $("m-hp").innerHTML=HP[alg].map(h=>`<div class="field"><label for="hp-${h.id}">${h.name} <span class="val" id="hp-${h.id}-v">${h.val}</span></label><input type="range" id="hp-${h.id}" min="${h.min}" max="${h.max}" step="${h.step}" value="${h.val}"><span class="muted">${h.d}</span></div>`).join("");
+  HP[alg].forEach(h=>$("hp-"+h.id).addEventListener("input",e=>$("hp-"+h.id+"-v").textContent=e.target.value));
+}
+function readHP(){ const o={}; HP[$("m-alg").value].forEach(h=>o[h.id]=+$("hp-"+h.id).value); return o; }
+const ALGNAME={lin:"Regresión lineal",tree:"Árbol de decisión",rf:"Bosque aleatorio",knn:"k vecinos"};
+
+function metrics(real,pred){
+  const lr=real.map(v=>Math.log10(v)), lp=pred.map(v=>Math.log10(Math.max(v,0.1)));
+  const mu=lr.reduce((a,b)=>a+b,0)/lr.length; let ssr=0,sst=0; lr.forEach((v,i)=>{ssr+=(v-lp[i])**2; sst+=(v-mu)**2;});
+  const ape=real.map((v,i)=>Math.abs(pred[i]-v)/v).sort((a,b)=>a-b);
+  const mae=real.reduce((a,v,i)=>a+Math.abs(pred[i]-v),0)/real.length;
+  return {r2:1-ssr/(sst||1e-12), mape:ape[Math.floor(ape.length/2)]*100, mae};
+}
+let MODELS=[]; // historial
+let modelSeq=0;
+let TRAINING=false;
+async function trainModel(){
+  if(TRAINING) return;
+  if(!DATA){ $("m-status").textContent="Primero genera ensayos en la etapa 2."; return; }
+  const sel=FEATS.filter(f=>$("feat-"+f.id).checked).map(f=>f.id);
+  if(!sel.length){ $("m-status").textContent="Seleccione al menos una variable."; return; }
+  const alg=$("m-alg").value, hp=readHP(), useLog=$("m-log").checked, val=$("m-val").value;
+  const tf=v=>useLog?Math.log(v):v, inv=v=>useLog?Math.exp(v):v;
+  const rows=DATA.rows, X=rows.map(r=>featVector(r,sel)), Y=rows.map(r=>tf(r.y)), real=rows.map(r=>r.y);
+  const seed=DATA.cfg.seed+(++modelSeq)*7919;
+  const r=mulberry32(seed); const order=[...rows.keys()]; for(let i=order.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  let evalIdx, trainM, testM, foldTxt="", finalModel, evalPred;
+  const sub=(arr,idx)=>idx.map(i=>arr[i]);
+  const clampP=v=>Math.min(CAP,Math.max(0.5,inv(v)));
+  const kf=val==="cv"?+$("m-k").value:1; const units=(alg==="rf"?hp.trees:1)*(val==="cv"?kf+1:1); let done=0;
+  const verb={rf:"Plantando árbol",tree:"Construyendo árbol",lin:"Ajustando coeficientes",knn:"Indexando vecinos"}[alg];
+  const tick=n=>{ done+=n; $("m-pbar-i").style.width=Math.min(100,done/units*100)+"%"; $("m-status").textContent=`${verb}${alg==="rf"?" "+Math.min(done,units)+" de "+units:""}…`; };
+  TRAINING=true; $("m-train").disabled=true; $("m-pbar").hidden=false; $("m-pbar-i").style.width="0%";
+  try{
+  if(val==="holdout"){
+    const nt=Math.round(rows.length*(+$("m-split").value)/100);
+    const te=order.slice(0,nt), tr=order.slice(nt);
+    const mod=await fitModelA(alg,sub(X,tr),sub(Y,tr),hp,seed,tick);
+    const pTr=tr.map(i=>clampP(mod.predict(X[i]))), pTe=te.map(i=>clampP(mod.predict(X[i])));
+    trainM=metrics(sub(real,tr),pTr); testM=metrics(sub(real,te),pTe);
+    evalIdx=te; evalPred=pTe; finalModel=mod;
+    foldTxt=`${tr.length} para entrenar, ${te.length} para prueba`;
+  } else {
+    const k=+$("m-k").value; const oof=Array(rows.length); const fm=[]; const trMs=[];
+    for(let f=0;f<k;f++){
+      const te=order.filter((_,i)=>i%k===f), tr=order.filter((_,i)=>i%k!==f);
+      const mod=await fitModelA(alg,sub(X,tr),sub(Y,tr),hp,seed+f,tick);
+      te.forEach(i=>oof[i]=clampP(mod.predict(X[i])));
+      fm.push(metrics(sub(real,te),te.map(i=>oof[i])));
+      trMs.push(metrics(sub(real,tr),tr.map(i=>clampP(mod.predict(X[i])))));
+    }
+    const avg=(a,key)=>a.reduce((s,m)=>s+m[key],0)/a.length;
+    const sd=(a,key)=>{ const m=avg(a,key); return Math.sqrt(a.reduce((s,x)=>s+(x[key]-m)**2,0)/a.length); };
+    testM={r2:avg(fm,"r2"),mape:avg(fm,"mape"),mae:avg(fm,"mae"),r2sd:sd(fm,"r2"),mapesd:sd(fm,"mape")};
+    trainM={r2:avg(trMs,"r2"),mape:avg(trMs,"mape"),mae:avg(trMs,"mae")};
+    evalIdx=[...rows.keys()]; evalPred=oof;
+    finalModel=await fitModelA(alg,X,Y,hp,seed,tick);
+    foldTxt=`${k} pliegues; el modelo final se entrena con los ${rows.length} ensayos`;
+  }
+  // material no visto
+  let unseenM=null, unseenPts=[];
+  if(DATA.unseen.length){ const pu=DATA.unseen.map(u=>clampP(finalModel.predict(featVector(u,sel)))); unseenM=metrics(DATA.unseen.map(u=>u.y),pu); unseenPts=DATA.unseen.map((u,i)=>({real:u.y,pred:pu[i],group:1,label:`${prodById(u.prod).name} · ${matById(u.mat).name}`})); }
+  // importancia por permutación (sobre el conjunto de evaluación, usando el modelo final si CV)
+  const impModel = finalModel;
+  const Xe=evalIdx.map(i=>X[i]), Ye=evalIdx.map(i=>real[i]);
+  const errOf=P=>P.reduce((a,v,i)=>a+Math.abs(Math.log(v)-Math.log(Ye[i])),0)/P.length;
+  const base=errOf(Xe.map(x=>clampP(impModel.predict(x))));
+  const groups=featGroups(sel); const rr=mulberry32(seed+99); const imps=[];
+  groups.forEach(g=>{ const perm=[...Xe.keys()]; for(let i=perm.length-1;i>0;i--){ const j=Math.floor(rr()*(i+1)); [perm[i],perm[j]]=[perm[j],perm[i]]; } const Xp=Xe.map((x,i)=>{ const z=x.slice(); g.cols.forEach(c=>z[c]=Xe[perm[i]][c]); return z; }); imps.push({name:g.name,raw:Math.max(0,errOf(Xp.map(x=>clampP(impModel.predict(x))))-base)}); });
+  const totImp=imps.reduce((a,b)=>a+b.raw,0)||1; imps.forEach(i=>i.v=i.raw/totImp*100); imps.sort((a,b)=>b.v-a.v);
+  // rangos de entrenamiento
+  const range=key=>{ const vs=rows.map(key); return [Math.min(...vs),Math.max(...vs)]; };
+  const ranges={T:range(r=>r.T),HR:range(r=>r.HR),f:range(r=>r.f),am:range(r=>2*r.w*r.h/1e4/(r.mass/1000))};
+  const id=MODELS.length+1;
+  const hpTxt=Object.entries(hp).map(([k,v])=>({ridge:"ridge",depth:"prof.",leaf:"hoja",trees:"árboles",k:"k"}[k]+" "+v)).join(", ");
+  const entry={id,name:`M${id} · ${ALGNAME[alg]}`,alg,hp,hpTxt,sel,useLog,val,foldTxt,trainM,testM,unseenM,model:finalModel,inv,ranges,matsSeen:DATA.allowed.slice(),nData:rows.length,noise:DATA.cfg.noise};
+  MODELS.push(entry);
+  // render
+  const gap=trainM.r2-testM.r2;
+  const ofit = gap>0.08 ? `<span class="chip warn">Posible sobreajuste</span>` : `<span class="chip good">Sin sobreajuste evidente</span>`;
+  $("m-tiles").innerHTML=`
+    <div class="tile fade"><div class="k">R² en ${val==="cv"?"validación":"prueba"} ${H("r2")}</div><div class="v">${fmt(testM.r2,3)}</div><div class="d">${val==="cv"?"± "+fmt(testM.r2sd,3)+" entre pliegues":"entrenamiento "+fmt(trainM.r2,3)}</div></div>
+    <div class="tile fade"><div class="k">Error típico ${H("errtip")}</div><div class="v">${fmt(testM.mape,1)} %</div><div class="d">entrenamiento ${fmt(trainM.mape,1)} %</div></div>
+    <div class="tile fade"><div class="k">Error medio absoluto</div><div class="v">${fmt(testM.mae)}</div><div class="d">días</div></div>
+    <div class="tile fade"><div class="k">Diagnóstico ${H("sobreajuste")}</div><div style="margin-top:6px">${ofit}</div><div class="d" style="margin-top:6px">${foldTxt}</div></div>
+    ${unseenM?`<div class="tile fade"><div class="k">Material no ensayado ${H("extrap")}</div><div class="v">${fmt(unseenM.mape,1)} %</div><div class="d">error típico · R² ${fmt(unseenM.r2,2)}</div></div>`:""}`;
+  const pts=evalIdx.map((i,k)=>({real:real[i],pred:evalPred[k],group:0,label:`${prodById(rows[i].prod).name} · ${matById(rows[i].mat).name}`}));
+  drawScatter($("m-scatter"),pts.concat(unseenPts));
+  $("m-sc-cap").textContent = val==="cv" ? "Predicciones fuera de pliegue: cada ensayo predicho por un modelo que no lo vio al entrenar." : "Ensayos de prueba, que el modelo no vio al entrenar.";
+  $("m-sc-leg").innerHTML=`<span><i style="background:var(--series-1)"></i>${val==="cv"?"Validación cruzada":"Prueba"}</span>`+(unseenPts.length?`<span><i style="background:var(--series-2)"></i>Material no ensayado</span>`:"")+`<span>Línea punteada: predicción perfecta</span>`;
+  drawBars($("m-imp"),imps);
+  entry.top=imps.length?imps[0].name:""; entry.imps=imps;
+  renderHyp(entry);
+  if(!CHAMP && MODELS.length===1) {} 
+  $("m-status").textContent=`Modelo M${id} entrenado.${MODELS.length<3?" Entrena otros para compararlos.":" Elige tu campeón en la bitácora."}`;
+  renderLog(); refreshModelSelect(); drawModelCompare();
+  } finally { TRAINING=false; $("m-train").disabled=false; setTimeout(()=>{ $("m-pbar").hidden=true; },400); updateMissions(); }
+}
+function renderHyp(entry){
+  const box=$("m-hyp"); const h=FLAGS.hyp; if(!h){ box.innerHTML=""; return; }
+  const hn=FEATS.find(f=>f.id===h).name;
+  if(!entry.sel.includes(h)){ box.innerHTML=`<span>Tu hipótesis: <b>${esc(hn)}</b>.</span><span class="chip warn">No la incluiste como variable en este modelo</span>`; return; }
+  const pos=entry.imps.findIndex(i=>i.name===hn);
+  const chip= pos===0?`<span class="chip good">¡Acertaste! Es la más importante</span>` : pos===1?`<span class="chip good">Casi: es la segunda más importante</span>` : `<span class="chip warn">El modelo encontró otra cosa</span>`;
+  box.innerHTML=`<span>Tu hipótesis: <b>${esc(hn)}</b> · Para este modelo, la más importante es <b>${esc(entry.top)}</b>.</span>${chip}`;
+}
+function drawModelCompare(){
+  const box=$("m-cmp"); box.innerHTML="";
+  if(!MODELS.length){ box.innerHTML=`<div class="empty">Aquí aparecerán tus modelos lado a lado.</div>`; $("m-cmp-leg").innerHTML=""; return; }
+  const list=MODELS.slice(-8);
+  const W=560,rowH=40,ml=200,mr=60,mt=6; const H=mt+list.length*rowH+24;
+  const max=Math.max(10,...list.map(m=>Math.max(m.testM.mape,m.trainM.mape)))*1.08;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Error típico de prueba y de entrenamiento por modelo"},box);
+  const sx=v=>ml+(W-ml-mr)*v/max;
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  niceTicks(0,max,4).forEach(v=>{ el("line",{x1:sx(v),x2:sx(v),y1:mt,y2:H-22},g); el("text",{x:sx(v),y:H-8,"text-anchor":"middle"},ax).textContent=fmt(v)+" %"; });
+  list.forEach((m,i)=>{ const y=mt+i*rowH; const champ=CHAMP===m.id;
+    el("text",{x:ml-8,y:y+16,"text-anchor":"end",class:"lab","font-weight":champ?"700":"400"},svg).textContent=(champ?"★ ":"")+m.name;
+    const bt=el("rect",{x:ml,y:y+4,width:Math.max(2,sx(m.testM.mape)-ml),height:13,rx:3,fill:"var(--series-1)"},svg);
+    const btr=el("rect",{x:ml,y:y+19,width:Math.max(2,sx(m.trainM.mape)-ml),height:9,rx:3,fill:"var(--series-2)"},svg);
+    el("text",{x:sx(m.testM.mape)+6,y:y+15,class:"lab"},svg).textContent=fmt(m.testM.mape,1)+" %";
+    [bt,btr].forEach(b=>{ b.addEventListener("mousemove",ev=>{ const r=svg.getBoundingClientRect(); showTip(box,(ev.clientX-r.left),(ev.clientY-r.top),`${esc(m.name)}<br>Prueba ${fmt(m.testM.mape,1)} % · Entrenamiento ${fmt(m.trainM.mape,1)} %`); }); b.addEventListener("mouseleave",hideTip); });
+  });
+  $("m-cmp-leg").innerHTML=`<span><i style="background:var(--series-1)"></i>Prueba (datos no vistos)</span><span><i style="background:var(--series-2)"></i>Entrenamiento</span><span>★ Campeón</span>`;
+}
+function renderLog(){
+  const t=$("m-log-t");
+  if(!MODELS.length){ t.innerHTML=`<tr><td class="muted">Aún no hay modelos entrenados.</td></tr>`; return; }
+  t.innerHTML=`<tr><th>Campeón</th><th>Modelo</th><th>Hiperparámetros</th><th>Variables</th><th>Log</th><th>Validación</th><th class="num">Ensayos</th><th class="num">R² entren.</th><th class="num">R² prueba</th><th class="num">Error típico</th><th class="num">Mat. no visto</th></tr>`+
+    MODELS.slice().reverse().map(m=>`<tr class="${CHAMP===m.id?"hi":""}"><td><input type="radio" name="champ" value="${m.id}" ${CHAMP===m.id?"checked":""} aria-label="Elegir ${esc(m.name)} como campeón"></td><td>${esc(m.name)}</td><td>${esc(m.hpTxt)}</td><td>${m.sel.map(s=>FEATS.find(f=>f.id===s).name).join(", ")}</td><td>${m.useLog?"Sí":"No"}</td><td>${m.val==="cv"?"k-fold":"Separación"}</td><td class="num">${m.nData}</td><td class="num">${fmt(m.trainM.r2,3)}</td><td class="num">${fmt(m.testM.r2,3)}</td><td class="num">${fmt(m.testM.mape,1)} %</td><td class="num">${m.unseenM?fmt(m.unseenM.mape,1)+" %":"—"}</td></tr>`).join("");
+}
+
+// ---------------- 4 Optimizar ----------------
+let OPT=null;
+function refreshModelSelect(){
+  const s=$("o-model"); const cur=s.value;
+  s.innerHTML = MODELS.length ? MODELS.slice().reverse().map(m=>`<option value="${m.id}">${CHAMP===m.id?"★ ":""}${esc(m.name)} (error ${fmt(m.testM.mape,1)} %)</option>`).join("") : `<option value="">Entrena un modelo en la etapa 3</option>`;
+  if(CHAMP) s.value=String(CHAMP); else if(cur && MODELS.find(m=>String(m.id)===cur)) s.value=cur;
+}
+function loadReto(){
+  const rt=RETOS.find(r=>r.id===$("o-reto").value), cl=CLIMATES.find(c=>c.id===rt.clim);
+  $("o-reto-d").textContent=rt.d;
+  const pr=prodById(rt.prod)||PRODUCTS[0];
+  $("o-prod").value=pr.id; $("o-mass").value=prodById(rt.prod)?rt.mass:pr.mass; $("o-w").value=prodById(rt.prod)?rt.w:pr.w; $("o-h").value=prodById(rt.prod)?rt.h:pr.h;
+  $("o-T").value=cl.T; $("o-HR").value=cl.HR; $("o-meta").value=rt.meta; $("o-eol").value=rt.eol; $("o-n2").value="0";
+}
+function runOpt(){
+  const M=MODELS.find(m=>String(m.id)===$("o-model").value);
+  if(!M){ $("o-tiles").innerHTML=`<p class="msg warn">Primero entrena un modelo en la etapa 3.</p>`; return; }
+  const base={prod:$("o-prod").value, mass:+$("o-mass").value, w:+$("o-w").value, h:+$("o-h").value, T:+$("o-T").value, HR:+$("o-HR").value, n2:$("o-n2").value==="1", color:COLORS[0], lote:1};
+  const meta=+$("o-meta").value, margin=+$("o-margin").value/100, eol=$("o-eol").value;
+  const need=meta*(1+margin);
+  const am=2*base.w*base.h/1e4/(base.mass/1000);
+  const rows=[];
+  MATERIALS.forEach(m=>{ if(eol==="green" && m.cls!=="good") return; CALIBRES.forEach(f=>{
+    const c=Object.assign({},base,{mat:m.id,f});
+    const pred=Math.min(CAP,Math.max(0.5,M.inv(M.model.predict(featVector(c,M.sel)))));
+    const ph=physics(c);
+    const why=[];
+    if(!M.matsSeen.includes(m.id)) why.push("material no ensayado");
+    if(base.T<M.ranges.T[0]-0.5||base.T>M.ranges.T[1]+0.5) why.push("temperatura fuera de rango");
+    if(base.HR<M.ranges.HR[0]-0.5||base.HR>M.ranges.HR[1]+0.5) why.push("HR fuera de rango");
+    if(f<M.ranges.f[0]-0.01||f>M.ranges.f[1]+0.01) why.push("calibre fuera de rango");
+    if(am<M.ranges.am[0]*0.98||am>M.ranges.am[1]*1.02) why.push("formato fuera de rango");
+    rows.push({mat:m,f,pred,real:ph.t,cost:ph.cost,ok:pred>=need,extrap:why.length>0,why,chosen:false});
+  }); });
+  rows.sort((a,b)=> (b.ok-a.ok) || (a.ok? a.cost-b.cost : b.pred-a.pred));
+  OPT={rows,meta,need,M,revealed:false,choice:null,reto:$("o-reto").value};
+  $("o-verdict").innerHTML="";
+  renderOpt(); updateMissions();
+}
+function renderOpt(){
+  if(!OPT) return;
+  const {rows,meta,need,M,revealed}=OPT;
+  const okRows=rows.filter(r=>r.ok); const best=okRows[0];
+  $("o-tiles").innerHTML=`
+    <div class="tile fade"><div class="k">Opciones evaluadas</div><div class="v">${rows.length}</div><div class="d">${MATERIALS.length} materiales × ${CALIBRES.length} calibres${$("o-eol").value==="green"?", filtradas por fin de vida":""}</div></div>
+    <div class="tile"><div class="k">Cumplen la meta (predicho)</div><div class="v">${okRows.length}</div><div class="d">≥ ${fmt(need)} días${need>meta?" con margen":""}</div></div>
+    <div class="tile"><div class="k">Más barata que cumple</div><div class="v" style="font-size:18px">${best?esc(best.mat.name):"Ninguna"}</div><div class="d">${best?"calibre ×"+fmt(best.f,1)+" · $"+fmt(best.cost,2):"Revise meta, formato o atmósfera"}</div></div>
+    <div class="tile"><div class="k">Modelo</div><div class="v" style="font-size:18px">${esc(M.name)}</div><div class="d">error típico ${fmt(M.testM.mape,1)} %</div></div>`;
+  drawCostChart($("o-chart"),rows,meta);
+  $("o-leg").innerHTML=`<span><i style="background:var(--series-1)"></i>Dentro del rango de los ensayos</span><span><i style="background:var(--series-2)"></i>Extrapolación (poco confiable)</span><span><i style="background:var(--series-3)"></i>Su elección</span>`;
+  const t=$("o-table");
+  t.innerHTML=`<tr><th>Elegir</th><th>Material</th><th class="num">Calibre</th><th class="num">Vida predicha (d)</th><th>¿Cumple?</th><th>Confianza ${H("extrap")}</th><th class="num">Costo</th><th>Fin de vida</th>${revealed?`<th class="num">Vida real (d)</th><th>Resultado ${H("fp")}</th>`:""}</tr>`+
+    rows.map((r,i)=>{
+      let res="";
+      if(revealed){ const realOk=r.real>=meta; res = r.ok&&realOk?`<span class="chip good">Acierto</span>`: r.ok&&!realOk?`<span class="chip bad">Falso positivo</span>`: !r.ok&&realOk?`<span class="chip warn">Oportunidad perdida</span>`:`<span class="chip neutral">Bien descartada</span>`; }
+      return `<tr class="${r.chosen?"hi":""}"><td><input type="radio" name="o-pick" value="${i}" ${r.chosen?"checked":""} ${revealed?"disabled":""} aria-label="Elegir ${esc(r.mat.name)} calibre ${r.f}"></td><td>${esc(r.mat.name)}</td><td class="num">×${fmt(r.f,1)}</td><td class="num">${r.pred>=CAP?"≥ 1 095":fmt(r.pred)}</td><td>${r.ok?`<span class="chip good">Sí</span>`:`<span class="chip neutral">No</span>`}</td><td>${r.extrap?`<span class="chip warn" title="${esc(r.why.join(", "))}">Extrapola: ${esc(r.why.join(", "))}</span>`:`<span class="chip good">En rango</span>`}</td><td class="num">$${fmt(r.cost,2)}</td><td><span class="chip ${r.mat.cls}">${esc(r.mat.eol)}</span></td>${revealed?`<td class="num">${r.real>=CAP?"≥ 1 095":fmt(r.real)}</td><td>${res}</td>`:""}</tr>`;
+    }).join("");
+  t.querySelectorAll('input[name="o-pick"]').forEach(inp=>inp.addEventListener("change",e=>{ if(OPT.revealed) return; OPT.rows.forEach(r=>r.chosen=false); OPT.rows[+e.target.value].chosen=true; renderOpt(); }));
+  gateReveal();
+}
+function gateReveal(){
+  const ok=!!(OPT && !OPT.revealed && OPT.rows.some(r=>r.chosen) && $("o-just").value.trim().length>=40);
+  $("o-reveal").disabled=!ok;
+  const n=$("o-just").value.trim().length;
+  $("o-hint").textContent = !OPT ? "Primero presiona Predecir y ordenar opciones." : OPT.revealed ? "Resultado revelado. Para otro intento, cambia de escenario o vuelve a predecir." : !OPT.rows.some(r=>r.chosen) ? "Marca tu elección en la primera columna." : n<40 ? `Escribe tu justificación: faltan ${40-n} caracteres para habilitar Revelar resultado real.` : "Listo: ya puedes revelar el resultado real.";
+  updateMissions();
+}
+function renderVerdict(){
+  const {rows,meta}=OPT;
+  const fp=rows.filter(r=>r.ok&&r.real<meta).length, miss=rows.filter(r=>!r.ok&&r.real>=meta).length;
+  const trueBest=rows.filter(r=>r.real>=meta).sort((a,b)=>a.cost-b.cost)[0];
+  const ch=rows.find(r=>r.chosen);
+  let html="";
+  if(ch){
+    const ok=ch.real>=meta;
+    html+=`<p class="msg ${ok?"good":"bad"}">Su elección (${esc(ch.mat.name)}, calibre ×${fmt(ch.f,1)}) tiene una vida real de ${daysText(ch.real)}: ${ok?"cumple la meta":"no cumple la meta"}. ${trueBest? (trueBest===ch?"Además es la opción real más barata que cumple.":`La opción real más barata que cumple era ${esc(trueBest.mat.name)}, calibre ×${fmt(trueBest.f,1)}, a $${fmt(trueBest.cost,2)}.`):"Ninguna opción cumple en realidad."}</p>`;
+  } else html+=`<p class="msg warn">No marcó una elección. Marque una opción para evaluarla.</p>`;
+  html+=`<p class="muted" style="margin-top:8px">El modelo dio por buenas ${fp} opción(es) que en realidad no cumplen (falsos positivos) y descartó ${miss} que sí cumplían. Discuta: ¿el margen de seguridad o un modelo mejor habrían evitado los falsos positivos?</p>`;
+  $("o-verdict").innerHTML=html;
+}
+
+// ---------------- 5 Referencia ----------------
+const PFIELDS=[["name","Nombre"],["mi","Humedad inicial"],["mc","Humedad crítica"],["m0","m₀ isoterma"],["b","b isoterma"],["tmax","t máx oxid. (d)"],["thr","Umbral oxid. U"],["mass","Contenido (g)"],["w","Ancho (cm)"],["h","Alto (cm)"]];
+const MFIELDS=[["name","Nombre"],["th","Espesor ref. (µm)"],["wvtr","WVTR (g/m²·d)"],["otr","OTR (cm³/m²·d·atm)"],["cost","Costo (MXN/m²)"],["eol","Fin de vida"],["cls","Clase"]];
+const CLS_OPTS=[["good","Reciclable o compostable"],["warn","Difícil de reciclar"],["bad","No reciclable"]];
+function renderRef(){
+  $("r-mats").innerHTML=`<tr>${MFIELDS.map(f=>`<th>${f[1]}</th>`).join("")}<th></th></tr>`+
+    MATERIALS.map((m,i)=>`<tr>${MFIELDS.map(f=>{
+      if(f[0]==="cls") return `<td><select id="rm-${i}-cls" aria-label="Clase de ${esc(m.name)}" style="min-width:150px">${CLS_OPTS.map(o=>`<option value="${o[0]}" ${m.cls===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></td>`;
+      const txt=f[0]==="name"||f[0]==="eol";
+      return `<td><input ${txt?'type="text"':'type="number" step="any" min="0"'} id="rm-${i}-${f[0]}" value="${esc(m[f[0]])}" aria-label="${f[1]} de ${esc(m.name)}" style="min-width:${txt?170:80}px"></td>`;
+    }).join("")}<td><button class="btn ghost" style="padding:2px 8px" data-mdel="${i}" ${MATERIALS.length<2?"disabled":""}>Quitar</button></td></tr>`).join("");
+  MATERIALS.forEach((m,i)=>MFIELDS.forEach(f=>$(`rm-${i}-${f[0]}`).addEventListener("change",e=>{
+    const txt=f[0]==="name"||f[0]==="eol"||f[0]==="cls"; const v=txt?e.target.value:+e.target.value;
+    if(!txt&&!(Number.isFinite(v)&&v>0)){ e.target.value=m[f[0]]; msg("r-mat-msg","bad",`${f[1]} debe ser un número mayor que cero.`); return; }
+    m[f[0]]=v; refreshMaterialViews(false);
+  })));
+  $("r-prods").innerHTML=`<tr>${PFIELDS.map(f=>`<th>${f[1]}</th>`).join("")}<th></th></tr>`+
+    PRODUCTS.map((p,i)=>`<tr>${PFIELDS.map(f=>`<td><input ${f[0]==="name"?'type="text"':'type="number" step="any"'} id="rp-${i}-${f[0]}" value="${esc(p[f[0]])}" aria-label="${f[1]} de ${esc(p.name)}" style="min-width:${f[0]==="name"?150:76}px"></td>`).join("")}<td><button class="btn ghost" style="padding:2px 8px" data-pdel="${i}" ${PRODUCTS.length<2?"disabled":""}>Quitar</button></td></tr>`).join("");
+  PRODUCTS.forEach((p,i)=>PFIELDS.forEach(f=>$(`rp-${i}-${f[0]}`).addEventListener("change",e=>{
+    const v=f[0]==="name"?e.target.value:+e.target.value;
+    if(f[0]!=="name"){ const err=checkProdValue(f[0],v,p); if(err){ e.target.value=p[f[0]]; msg("r-prod-msg","bad",err); return; } }
+    p[f[0]]=v; $("r-prod-msg").innerHTML=""; refreshProductSelects(); renderSim();
+  })));
+  $("r-clims").innerHTML=`<tr><th>Clima</th><th class="num">T (°C)</th><th class="num">HR (%)</th></tr>`+CLIMATES.map(c=>`<tr><td>${esc(c.name)}</td><td class="num">${c.T}</td><td class="num">${c.HR}</td></tr>`).join("");
+}
+function checkProdValue(k,v,p){
+  if(!Number.isFinite(v)) return "Escriba un número.";
+  if(["mi","mc","b","tmax","thr","mass","w","h"].includes(k) && v<=0) return "El valor debe ser mayor que cero.";
+  if(k==="m0" && v<0) return "m₀ no puede ser negativo.";
+  if(k==="mc" && v<=p.mi) return "La humedad crítica debe ser mayor que la inicial.";
+  if(k==="mi" && v>=p.mc) return "La humedad inicial debe ser menor que la crítica.";
+  return null;
+}
+function msg(id,kind,text){ $(id).innerHTML=text?`<p class="msg ${kind}">${text}</p>`:""; }
+function refreshProductSelects(){ ["s-prod","o-prod"].forEach(id=>{ const v=$(id).value; fillSelect($(id),PRODUCTS,prodById(v)?v:PRODUCTS[0].id); }); }
+function renderDataMats(){
+  const prev={}; MATERIALS.forEach(m=>{ const e=$("d-mat-"+m.id); if(e) prev[m.id]=e.checked; });
+  $("d-mats").innerHTML=MATERIALS.map(m=>`<label class="check"><input type="checkbox" id="d-mat-${m.id}" ${(m.id in prev? prev[m.id] : m.id!=="petal")?"checked":""}><span>${esc(m.name)}</span></label>`).join("");
+}
+function refreshMaterialViews(rerender){
+  const v=$("s-mat").value; fillSelect($("s-mat"),MATERIALS,matById(v)?v:MATERIALS[0].id);
+  renderDataMats(); if(rerender) renderRef(); renderSim(); if(OPT) renderOpt();
+}
+function resetWork(text){
+  DATA=null; MODELS=[]; OPT=null;
+  renderData(); renderLog(); refreshModelSelect();
+  $("m-tiles").innerHTML=""; $("m-scatter").innerHTML=""; $("m-imp").innerHTML=""; $("m-sc-leg").innerHTML="";
+  $("o-tiles").innerHTML=""; $("o-chart").innerHTML=""; $("o-leg").innerHTML=""; $("o-table").innerHTML=""; $("o-verdict").innerHTML=""; $("o-reveal").disabled=true;
+  $("m-status").textContent=text;
+  CHAMP=null; $("m-hyp").innerHTML=""; drawModelCompare(); refreshModelSelect(); gateReveal(); updateMissions();
+}
+// ---- CSV
+function stripAcc(t){ return t.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim().replace(/[\s\-\.()/]+/g,"_").replace(/_+$/,""); }
+function parseCSV(text){
+  text=text.replace(/^﻿/,"");
+  const first=text.split(/\r?\n/).find(l=>l.trim())||"";
+  const delim=(first.split(";").length>first.split(",").length)?";":(first.split("\t").length>first.split(",").length?"\t":",");
+  const rows=[]; let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===delim){ row.push(cell); cell=""; }
+    else if(c==="\n"||c==="\r"){ if(c==="\r"&&text[i+1]==="\n") i++; row.push(cell); rows.push(row); row=[]; cell=""; }
+    else cell+=c;
+  }
+  if(cell!==""||row.length){ row.push(cell); rows.push(row); }
+  return {delim, rows:rows.filter(r=>r.some(x=>x.trim()!==""))};
+}
+function num(v){ if(v===undefined) return NaN; let t=String(v).trim(); if(t==="") return NaN; if(/,/.test(t)) t=t.replace(/\./g,"").replace(",","."); t=t.replace(/[^\d.eE+\-]/g,""); return t===""?NaN:+t; }
+function slug(t,used){ let b=stripAcc(t).replace(/[^a-z0-9_]/g,"").slice(0,24)||"item"; let id=b,k=2; while(used.has(id)) id=b+"_"+(k++); used.add(id); return id; }
+const MAT_ALIASES={name:["nombre","material","name"],th:["espesor_um","espesor","espesor_ref","espesor_ref_um","thickness"],wvtr:["wvtr","wvtr_g_m2_d","tvva"],otr:["otr","otr_cm3_m2_d_atm","tpo"],cost:["costo_m2","costo","costo_mxn_m2","cost"],eol:["fin_de_vida","fin_vida","reciclabilidad","eol"],cls:["clase","categoria","class"]};
+const PROD_ALIASES={name:["nombre","producto","name"],mi:["humedad_inicial","mi","humedad_inicial_bs"],mc:["humedad_critica","mc","humedad_critica_bs"],m0:["m0","m_0","isoterma_m0"],b:["b","pendiente","isoterma_b"],tmax:["tmax_oxidacion","tmax","t_max","tmax_dias"],thr:["umbral_oxidacion","umbral","u","thr"],mass:["contenido_g","contenido","masa_g","masa"],w:["ancho_cm","ancho"],h:["alto_cm","alto"]};
+function mapHeader(header,aliases){ const h=header.map(stripAcc); const idx={}; for(const k in aliases){ const j=h.findIndex(x=>aliases[k].includes(x)); if(j>=0) idx[k]=j; } return idx; }
+function clsFrom(v,eol){
+  const t=stripAcc(v||"");
+  if(["good","reciclable","compostable","verde"].includes(t)) return "good";
+  if(["warn","dificil","dificil_de_reciclar","limitado"].includes(t)) return "warn";
+  if(["bad","no","no_reciclable","noreciclable"].includes(t)) return "bad";
+  const e=stripAcc(eol||"");
+  if(e.includes("no_recicl")) return "bad"; if(e.includes("dificil")) return "warn"; return "good";
+}
+function readFile(input,cb){ const f=input.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ cb(String(r.result), f.name); input.value=""; }; r.onerror=()=>{ cb(null,f.name); input.value=""; }; r.readAsText(f,"utf-8"); }
+function loadMaterialsCSV(text,fname){
+  if(text===null){ msg("r-mat-msg","bad",`No se pudo leer ${esc(fname)}.`); return; }
+  const {delim,rows}=parseCSV(text);
+  if(rows.length<2){ msg("r-mat-msg","bad","El archivo no tiene filas de datos debajo de los encabezados."); return; }
+  const idx=mapHeader(rows[0],MAT_ALIASES);
+  const missing=["name","th","wvtr","otr","cost"].filter(k=>!(k in idx));
+  if(missing.length){ msg("r-mat-msg","bad",`Faltan columnas: ${missing.map(k=>MAT_ALIASES[k][0]).join(", ")}. Revise la plantilla al final de esta pestaña.`); return; }
+  const used=new Set(), out=[], errs=[];
+  rows.slice(1).forEach((r,i)=>{
+    const name=(r[idx.name]||"").trim(); const o={name, th:num(r[idx.th],delim), wvtr:num(r[idx.wvtr],delim), otr:num(r[idx.otr],delim), cost:num(r[idx.cost],delim)};
+    const bad=["th","wvtr","otr","cost"].filter(k=>!(Number.isFinite(o[k])&&o[k]>0));
+    if(!name||bad.length){ errs.push(`fila ${i+2}${name?" ("+esc(name)+")":""}: ${!name?"sin nombre":"valor inválido en "+bad.map(k=>MAT_ALIASES[k][0]).join(", ")}`); return; }
+    o.eol=("eol" in idx && (r[idx.eol]||"").trim())||"Sin dato"; o.cls=clsFrom("cls" in idx?r[idx.cls]:"",o.eol);
+    const prev=MATERIALS.find(m=>m.name===name); o.id=prev&&!used.has(prev.id)?(used.add(prev.id),prev.id):slug(name,used);
+    out.push(o);
+  });
+  if(!out.length){ msg("r-mat-msg","bad","Ninguna fila válida. "+errs.slice(0,5).join("; ")); return; }
+  MATERIALS.splice(0,MATERIALS.length,...out);
+  resetWork("Se cargaron materiales nuevos: genere ensayos otra vez y vuelva a entrenar.");
+  refreshMaterialViews(true);
+  msg("r-mat-msg",errs.length?"warn":"good",`Se cargaron ${out.length} materiales de ${esc(fname)}.${errs.length?" Se omitieron "+errs.length+": "+errs.slice(0,5).join("; ")+(errs.length>5?"…":"")+".":""} Los ensayos y modelos anteriores se borraron.`);
+}
+function loadProductsCSV(text,fname){
+  if(text===null){ msg("r-prod-msg","bad",`No se pudo leer ${esc(fname)}.`); return; }
+  const {delim,rows}=parseCSV(text);
+  if(rows.length<2){ msg("r-prod-msg","bad","El archivo no tiene filas de datos debajo de los encabezados."); return; }
+  const idx=mapHeader(rows[0],PROD_ALIASES);
+  const missing=Object.keys(PROD_ALIASES).filter(k=>!(k in idx));
+  if(missing.length){ msg("r-prod-msg","bad",`Faltan columnas: ${missing.map(k=>PROD_ALIASES[k][0]).join(", ")}. Revise la plantilla al final de esta pestaña.`); return; }
+  const used=new Set(), out=[], errs=[];
+  rows.slice(1).forEach((r,i)=>{
+    const name=(r[idx.name]||"").trim(); const o={name};
+    ["mi","mc","m0","b","tmax","thr","mass","w","h"].forEach(k=>o[k]=num(r[idx[k]],delim));
+    if([o.mi,o.mc,o.m0].every(Number.isFinite) && (o.mi>1||o.mc>1)){ const pc=x=>+(x/100).toPrecision(6); o.mi=pc(o.mi); o.mc=pc(o.mc); if(o.m0>1) o.m0=pc(o.m0); }
+    let err=!name?"sin nombre":null;
+    if(!err) for(const k of ["mi","mc","m0","b","tmax","thr","mass","w","h"]){ const e=checkProdValue(k,o[k],o); if(e){ err=`${PROD_ALIASES[k][0]}: ${e.toLowerCase()}`; break; } }
+    if(err){ errs.push(`fila ${i+2}${name?" ("+esc(name)+")":""}: ${err}`); return; }
+    const prev=PRODUCTS.find(p=>p.name===name); o.id=prev&&!used.has(prev.id)?(used.add(prev.id),prev.id):slug(name,used);
+    out.push(o);
+  });
+  if(!out.length){ msg("r-prod-msg","bad","Ninguna fila válida. "+errs.slice(0,5).join("; ")); return; }
+  PRODUCTS.splice(0,PRODUCTS.length,...out);
+  resetWork("Se cargaron productos nuevos: genere ensayos otra vez y vuelva a entrenar.");
+  refreshProductSelects(); loadProdDefaults("s",$("s-prod").value); renderRef(); renderSim(); loadReto();
+  msg("r-prod-msg",errs.length?"warn":"good",`Se cargaron ${out.length} productos de ${esc(fname)}.${errs.length?" Se omitieron "+errs.length+": "+errs.slice(0,5).join("; ")+(errs.length>5?"…":"")+".":""} Los ensayos y modelos anteriores se borraron.`);
+}
+const csvCell=v=>{ const t=String(v); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t; };
+const CLS_CSV={good:"reciclable",warn:"dificil",bad:"no_reciclable"};
+function materialsCSV(){ return "nombre,espesor_um,wvtr,otr,costo_m2,fin_de_vida,clase\n"+MATERIALS.map(m=>[m.name,m.th,m.wvtr,m.otr,m.cost,m.eol,CLS_CSV[m.cls]].map(csvCell).join(",")).join("\n"); }
+function productsCSV(){ return "nombre,humedad_inicial,humedad_critica,m0,b,tmax_oxidacion,umbral_oxidacion,contenido_g,ancho_cm,alto_cm\n"+PRODUCTS.map(p=>[p.name,p.mi,p.mc,p.m0,p.b,p.tmax,p.thr,p.mass,p.w,p.h].map(csvCell).join(",")).join("\n"); }
+
+// ---------------- Estado de la experiencia ----------------
+const SIM={};
+const FLAGS={played:false,hyp:""};
+let CHAMP=null;
+const REDUCED=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let CURRENT="sim", LASTMISSION="sim";
+function teamName(){ return $("team").value.trim(); }
+function store(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function load(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+
+// ---------------- Ayuda contextual ----------------
+const HELP={
+  material:["Material","Cada material deja pasar distinta cantidad de vapor de agua (WVTR) y de oxígeno (OTR). Sus valores están en Ayuda y datos."],
+  calibre:["Calibre","Espesor de la película. Al duplicarlo, pasa la mitad de vapor de agua y de oxígeno, pero se usa más material y cuesta más."],
+  contenido:["Contenido y formato","Una bolsa chica tiene más superficie por gramo de producto: entra más agua y oxígeno por gramo y el producto dura menos."],
+  atm:["Barrido con N₂","Antes de sellar se reemplaza el aire de la bolsa por nitrógeno. Queda menos oxígeno para enranciar las grasas."],
+  clima:["Clima de almacenamiento","Temperatura y humedad del lugar donde se vende el producto. El calor y la humedad aceleran el deterioro."],
+  hr:["Humedad relativa (HR)","Cuánto vapor de agua tiene el aire respecto del máximo posible. Si es mayor que la del producto, el agua tiende a entrar a la bolsa."],
+  vida:["Vida de anaquel","Días que el producto conserva su calidad. Aquí termina cuando gana demasiada humedad o cuando sus grasas se enrancian, lo que ocurra primero."],
+  limitante:["Factor limitante","El mecanismo que acaba primero con el producto. Mejorar la barrera contra el otro no alarga la vida."],
+  humcrit:["Humedad crítica","Humedad a la que el producto deja de ser aceptable: se apelmaza o pierde lo crujiente. Es la línea roja de la gráfica."],
+  fin:["Fin de vida","Qué pasa con el envase después de usarse: reciclaje, composta o basura. Los multicapa casi nunca se reciclan."],
+  ensayos:["Número de ensayos","Cada ensayo es una bolsa almacenada hasta que se echa a perder. En la vida real cada uno tarda semanas o meses."],
+  ruido:["Error experimental","Variación al medir: dos bolsas iguales no duran exactamente lo mismo. Ningún modelo puede predecir mejor que este ruido."],
+  rangos:["Rango de condiciones","Climas en los que se hicieron los ensayos. Fuera de ese rango, el modelo adivina (extrapola)."],
+  matens:["Materiales ensayados","El modelo solo aprende de los materiales que ensayes. Deja alguno fuera para comprobar si sabe generalizar."],
+  semilla:["Semilla","Número que fija el sorteo. Con la misma semilla se obtienen exactamente los mismos ensayos."],
+  hyp:["Hipótesis","Tu predicción antes de ver los datos. Al entrenar compararás tu intuición con lo que encontró el modelo."],
+  variables:["Variables de entrada","La información que usa el modelo para predecir. Las variables inútiles pueden confundirlo; sin una importante, queda ciego."],
+  log:["Predecir el logaritmo","La vida va de días a años. Con el logaritmo, fallar por 10 % pesa igual en un producto de 30 días que en uno de 300."],
+  alg:["Algoritmo","La receta con la que el modelo aprende. Regresión lineal: suma ponderada de variables. Árbol de decisión: reglas si-entonces. Bosque aleatorio: promedio de muchos árboles. k vecinos: promedia los ensayos más parecidos."],
+  validacion:["Validación","Medir el modelo con ensayos que no vio al entrenar. Separar aparta un grupo fijo; la validación cruzada rota ese grupo varias veces y promedia."],
+  r2:["R²","Qué tanto explica el modelo la variación de la vida de anaquel. 1 es perfecto; 0 es tan malo como predecir siempre el promedio."],
+  errtip:["Error típico","La mitad de las predicciones se equivocan por menos que este porcentaje."],
+  sobreajuste:["Sobreajuste","El modelo memorizó los ensayos de entrenamiento, ruido incluido, y predice peor los nuevos. Se nota cuando el entrenamiento sale mucho mejor que la prueba."],
+  extrap:["Extrapolación","Predecir fuera de lo que el modelo vio: otro clima, otro calibre o un material no ensayado. La predicción puede fallar mucho aunque las métricas sean buenas."],
+  importancia:["Importancia por permutación","Se revuelven al azar los valores de una variable y se mide cuánto empeora el modelo. Si casi no empeora, el modelo no la usa."],
+  predmed:["Predicho contra medido","Cada punto es un ensayo. Sobre la diagonal, la predicción fue perfecta; por encima, el modelo sobrestimó la vida."],
+  campeon:["Modelo campeón","El modelo que usarás para decidir. Elige el que mejor predice datos nuevos, no el que mejor se ve en entrenamiento."],
+  margen:["Margen de seguridad","Exige que la predicción supere la meta por un porcentaje extra, para cubrir el error del modelo."],
+  meta:["Meta","Días mínimos de vida de anaquel que pide el cliente."],
+  fp:["Falso positivo","El modelo dijo que el envase cumple y en realidad no. Es el error más caro: producto echado a perder en el anaquel."],
+  puntaje:["Puntaje","Hasta 100 puntos: cumplir la meta real (40), costo frente a la mejor opción (25), fin de vida (15), calidad del modelo (10) y rigor (10). Un falso positivo resta 10."]
+};
+function H(k){ return HELP[k]?`<button class="help" type="button" data-help="${k}" aria-label="Ayuda: ${esc(HELP[k][0])}">?</button>`:""; }
+const HELP_TARGETS={"s-mat":"material","s-f":"calibre","s-mass":"contenido","s-n2":"atm","s-clim":"clima","s-HR":"hr","d-hyp":"hyp","d-n":"ensayos","d-noise":"ruido","d-tmin":"rangos","d-seed":"semilla","m-alg":"alg","m-val":"validacion","o-meta":"meta","o-margin":"margen","o-eol":"fin","o-model":"campeon"};
+function addLabelHelp(){ for(const id in HELP_TARGETS){ const lab=document.querySelector(`label[for="${id}"]`); if(lab && !lab.querySelector(".help")) lab.insertAdjacentHTML("beforeend"," "+H(HELP_TARGETS[id])); } }
+const pop=$("pop"); let popBtn=null;
+function closePop(){ pop.style.display="none"; if(popBtn) popBtn.setAttribute("aria-expanded","false"); popBtn=null; }
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".help");
+  if(b){ e.preventDefault(); e.stopPropagation(); if(popBtn===b){ closePop(); return; } closePop(); const h=HELP[b.dataset.help]; if(!h) return;
+    pop.innerHTML=`<b>${esc(h[0])}</b>${esc(h[1])}`; pop.style.display="block"; popBtn=b; b.setAttribute("aria-expanded","true");
+    const r=b.getBoundingClientRect(); const pw=pop.offsetWidth; let left=r.left+window.scrollX-12; const maxL=window.scrollX+document.documentElement.clientWidth-pw-12; if(left>maxL) left=maxL; if(left<8) left=8;
+    pop.style.left=left+"px"; pop.style.top=(r.bottom+window.scrollY+8)+"px"; return; }
+  if(popBtn && !pop.contains(e.target)) closePop();
+},true);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closePop(); });
+
+// ---------------- Misiones ----------------
+const MISSIONS=[
+  {view:"sim",title:"Explora cómo falla un alimento envasado",obj:"Usa el simulador para descubrir qué acorta la vida de anaquel: la humedad que entra o el oxígeno que enrancia las grasas.",
+   tasks:[["Escribe el nombre de tu equipo",()=>teamName().length>0],["Reproduce la animación de la bolsa",()=>FLAGS.played],["Agrega 3 configuraciones a la comparación",()=>cmpRows.length>=3],["Encuentra un caso limitado por humedad y otro por oxidación",()=>cmpRows.some(r=>r.limit==="Humedad")&&cmpRows.some(r=>r.limit==="Oxidación")]]},
+  {view:"datos",title:"Diseña tus ensayos de laboratorio",obj:"Antes de entrenar, plantea una hipótesis y genera los ensayos con los que aprenderá tu modelo. Lo que no ensayes, el modelo no lo conocerá.",
+   tasks:[["Escribe tu hipótesis",()=>!!FLAGS.hyp],["Genera los ensayos",()=>!!DATA],["Deja al menos un material sin ensayar",()=>!!(DATA&&DATA.excluded.length)]]},
+  {view:"modelo",title:"Entrena y elige tu modelo campeón",obj:"Compara algoritmos, variables y validaciones. Gana el modelo que predice mejor los ensayos que no vio, no el que memoriza.",
+   tasks:[["Entrena 3 modelos",()=>MODELS.length>=3],["Prueba 2 algoritmos distintos",()=>new Set(MODELS.map(m=>m.alg)).size>=2],["Elige tu modelo campeón en la bitácora",()=>!!CHAMP]]},
+  {view:"opt",title:"Decide el envase",obj:"Con tu modelo campeón, elige el material y calibre que cumplen la meta al menor costo y con el mejor fin de vida. Después compáralo con la realidad.",
+   tasks:[["Predice y ordena las opciones",()=>!!OPT],["Marca tu elección",()=>!!(OPT&&OPT.rows.some(r=>r.chosen))],["Justifica tu decisión",()=>$("o-just").value.trim().length>=40],["Revela el resultado real",()=>!!(OPT&&OPT.revealed)]]},
+  {view:"rank",title:"Resultados y ranking",obj:"Revisa tu puntaje, compáralo con los demás equipos y prueba otro escenario para mejorar.",tasks:[]}
+];
+const VIEWS=MISSIONS.map(m=>m.view);
+const CHECK='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const LOCK='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 016 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+function missionDone(i){ const m=MISSIONS[i]; return m.tasks.length? m.tasks.every(t=>t[1]()) : RESULTS_MINE.length>0; }
+function unlocked(i){ if($("teacher").checked || i===0) return true; if(i===4) return RESULTS_MINE.length>0 || missionDone(3); for(let k=0;k<i;k++) if(!missionDone(k)) return false; return true; }
+let lastDoneCount=-1;
+function updateMissions(){
+  if(!$("mission")) return;
+  let doneTasks=0,totTasks=0;
+  MISSIONS.forEach((m,i)=>{ m.tasks.forEach(t=>{ totTasks++; if(t[1]()) doneTasks++; });
+    const b=document.querySelector(`.step[data-view="${m.view}"]`); const dn=missionDone(i), un=unlocked(i);
+    b.classList.toggle("done",dn); b.classList.toggle("locked",!un); b.setAttribute("aria-disabled",un?"false":"true");
+    b.toggleAttribute("aria-current",false); if(CURRENT===m.view) b.setAttribute("aria-current","step");
+    b.querySelector(".dot").innerHTML = dn? CHECK : !un? LOCK : String(i+1);
+    b.title = !un ? "Completa la misión anterior para desbloquear" : "";
+  });
+  $("prog").style.width=(totTasks?doneTasks/totTasks*100:0)+"%";
+  const box=$("mission");
+  if(CURRENT==="ref"){
+    box.innerHTML=`<div><div class="eyebrow">Ayuda y datos</div><h2>Materiales, productos y conceptos</h2><p>Consulta o edita los datos del laboratorio, carga tus propios CSV y repasa cómo leer las métricas.</p></div><div><button class="btn big" id="mis-back">Volver a la misión</button></div>`;
+    $("mis-back").onclick=()=>showView(LASTMISSION); return;
+  }
+  const i=VIEWS.indexOf(CURRENT), m=MISSIONS[i], dn=missionDone(i);
+  const next=MISSIONS[i+1];
+  const tasks=m.tasks.map(t=>{ const ok=t[1](); return `<li class="${ok?"ok":""}"><span class="bx">${CHECK}</span>${esc(t[0])}</li>`; }).join("");
+  const label = i<4 ? `Misión ${i+1} de 4` : "Cierre";
+  const btn = next ? `<button class="btn big" id="mis-next" ${dn?"":"disabled"}>${i===3?"Ver mi puntaje":"Siguiente: "+["","Ensayar","Entrenar","Decidir","Resultados"][i+1]} →</button>` : `<button class="btn big ghost" id="mis-next">Probar otro escenario</button>`;
+  box.innerHTML=`<div><div class="eyebrow">${label}${dn&&m.tasks.length?" · completada":""}</div><h2>${esc(m.title)}</h2><p>${esc(m.obj)}</p>${tasks?`<ul class="tasks">${tasks}</ul>`:""}</div><div>${btn}</div>`;
+  $("mis-next").onclick=()=> next ? showView(next.view) : showView("opt");
+}
+function showView(v){
+  const i=VIEWS.indexOf(v);
+  if(i>=0 && !unlocked(i)) return;
+  CURRENT=v; if(i>=0) LASTMISSION=v;
+  ["sim","datos","modelo","opt","rank","ref"].forEach(x=>$("view-"+x).classList.toggle("hidden",x!==v));
+  const sec=$("view-"+v); sec.classList.remove("fade"); void sec.offsetWidth; sec.classList.add("fade");
+  hideTip(); closePop(); stopPlay();
+  if(v==="rank") renderRank();
+  if(v==="modelo") drawModelCompare();
+  updateMissions();
+  const top=$("mission").getBoundingClientRect().top; if(top<0) window.scrollTo({top:window.scrollY+top-12,behavior:REDUCED?"auto":"smooth"});
+}
+
+// ---------------- La bolsa animada ----------------
+const PCOLORS={pinole:"#6d6fa6",cafe:"#5b3a26",totopo:"#d9a93a",grillo:"#8a6a48"};
+function hexMix(a,b,t){ const pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16); const c=[16,8,0].map(sh=>Math.round(((pa>>sh)&255)*(1-t)+((pb>>sh)&255)*t)); return "#"+c.map(x=>x.toString(16).padStart(2,"0")).join(""); }
+const BAG={parts:[],raf:0,playing:false};
+function buildBag(c,r){
+  const box=$("s-bag"); box.innerHTML="";
+  const svg=el("svg",{viewBox:"0 0 240 280",role:"img","aria-label":"Ilustración de la bolsa con el producto, el vapor de agua y el oxígeno que entran"},box);
+  const defs=el("defs",{},svg); const cp=el("clipPath",{id:"bagclip"},defs);
+  const POUCH="M60,44 L180,44 L192,250 Q120,266 48,250 Z";
+  el("path",{d:POUCH},cp);
+  el("path",{d:POUCH,fill:"var(--surface-2)",stroke:"var(--ink-3)","stroke-width":2},svg);
+  const g=el("g",{"clip-path":"url(#bagclip)"},svg);
+  const base=PCOLORS[c.prod]||"#a8916a";
+  BAG.base=base;
+  BAG.prod=el("path",{d:"M30,128 Q75,118 120,128 T210,128 L210,280 L30,280 Z",fill:base},g);
+  BAG.clumps=el("g",{opacity:0},g);
+  [[80,170,9],[132,150,7],[160,200,11],[100,220,8],[150,238,7],[70,240,6],[118,192,6]].forEach(([x,y,rr])=>el("circle",{cx:x,cy:y,r:rr,fill:hexMix(base,"#000000",0.35)},BAG.clumps));
+  BAG.rancid=el("rect",{x:30,y:110,width:180,height:170,fill:"#6b6b1f",opacity:0},g);
+  el("rect",{x:54,y:28,width:132,height:18,rx:3,fill:"var(--surface)",stroke:"var(--ink-3)","stroke-width":2},svg);
+  for(let x=62;x<182;x+=8) el("line",{x1:x,y1:31,x2:x,y2:43,stroke:"var(--ink-3)","stroke-width":1},svg);
+  // partículas
+  const m=matById(c.mat); const lw=Math.log10(m.wvtr/c.f), lo=Math.log10(m.otr/c.f);
+  const nW=Math.round(Math.max(1,Math.min(14,2+(lw+1.5)/3.8*12))), nO=Math.round(Math.max(1,Math.min(12,1+(lo+1)/5*11)));
+  const pg=el("g",{},svg); BAG.parts=[];
+  const rnd=mulberry32(7);
+  const mk=(kind)=>{ const left=rnd()<0.5; const y=70+rnd()*170; const wall= left? 60-(12*(y-44)/206) : 180+(12*(y-44)/206);
+    const xs= left? 4 : 236; const c2=el("circle",{r:kind==="w"?4:3.5,fill:kind==="w"?"var(--series-1)":"var(--series-2)"},pg);
+    const p={el:c2,xs,xw:wall,y,ph:rnd(),sp:0.25+rnd()*0.2}; BAG.parts.push(p); placePart(p); };
+  for(let i=0;i<nW;i++) mk("w"); for(let i=0;i<nO;i++) mk("o");
+}
+function placePart(p){ const t=p.ph; p.el.setAttribute("cx",p.xs+(p.xw-p.xs)*t); p.el.setAttribute("cy",p.y+Math.sin(t*6+p.y)*3); p.el.setAttribute("opacity",t<0.8?0.9:Math.max(0,(1-t)/0.2)*0.9); }
+function setSimDay(t){
+  if(!SIM.r) return; const r=SIM.r; SIM.day=t;
+  const m=r.me-(r.me-r.mi)*Math.exp(-r.K*t);
+  const frac=Math.max(0,Math.min(1.3,(m-r.mi)/Math.max(1e-9,r.mc-r.mi)));
+  BAG.prod.setAttribute("fill",hexMix(BAG.base,"#1d2333",Math.min(0.45,frac*0.3)));
+  BAG.clumps.setAttribute("opacity",Math.max(0,Math.min(1,(frac-0.6)/0.4)));
+  const ox=Number.isFinite(r.tO)? Math.max(0,Math.min(1,(t-r.tO*0.6)/(r.tO*0.4))) : 0;
+  BAG.rancid.setAttribute("opacity",ox*0.45);
+  $("bag-day").textContent="Día "+fmt(t);
+  $("bag-m").textContent=`Humedad ${fmt(m*100,1)} % b.s. (crítica ${fmt(r.mc*100,1)} %)`;
+  let st;
+  if(Number.isFinite(r.tH) && t>=r.tH && r.tH<=r.tO) st=`<span class="chip bad">Apelmazado</span>`;
+  else if(Number.isFinite(r.tO) && t>=r.tO) st=`<span class="chip bad">Rancio</span>`;
+  else if(t>=0.75*r.tRaw) st=`<span class="chip warn">Cerca del límite</span>`;
+  else st=`<span class="chip good">En especificación</span>`;
+  $("bag-status").innerHTML=st;
+  if(SIM.setDay) SIM.setDay(t);
+  const sd=$("s-day"); if(+sd.value!==Math.round(t)) sd.value=Math.round(t);
+}
+function stopPlay(){ BAG.playing=false; cancelAnimationFrame(BAG.raf); const b=$("s-play"); if(b) b.textContent="Reproducir"; }
+function play(){
+  if(BAG.playing){ stopPlay(); return; }
+  FLAGS.played=true; updateMissions();
+  const end=SIM.tEnd; let t0=SIM.day||0; if(t0>=end-0.5) t0=0;
+  if(REDUCED){ setSimDay(end); return; }
+  BAG.playing=true; $("s-play").textContent="Pausar";
+  const dur=6000*(end-t0)/end; let start=null, last=null;
+  const step=ts=>{ if(!BAG.playing) return; if(start===null){start=ts;last=ts;} const dt=(ts-last)/1000; last=ts;
+    const k=Math.min(1,(ts-start)/dur); setSimDay(t0+(end-t0)*k);
+    BAG.parts.forEach(p=>{ p.ph=(p.ph+p.sp*dt)%1; placePart(p); });
+    if(k<1) BAG.raf=requestAnimationFrame(step); else stopPlay(); };
+  BAG.raf=requestAnimationFrame(step);
+}
+
+// ---------------- Puntaje ----------------
+let RESULTS_MINE=[];          // resultados de este equipo en esta sesión
+let LOCAL_RANK=load("labva-rank",[]); // ranking de este navegador
+let LAST=null;
+function computeScore(){
+  const {rows,meta,need,M}=OPT; const ch=rows.find(r=>r.chosen);
+  const ok=ch.real>=meta; const feas=rows.filter(r=>r.real>=meta);
+  const minCost=feas.length?Math.min(...feas.map(r=>r.cost)):null;
+  const fpos=ch.pred>=need && !ok;
+  const parts=[
+    ["Cumple la meta real",ok?40:0,40],
+    ["Costo frente a la opción real más barata",ok&&minCost?Math.round(25*minCost/ch.cost):0,25],
+    ["Fin de vida del envase",ok?({good:15,warn:7,bad:0}[ch.mat.cls]):0,15],
+    ["Calidad del modelo usado",Math.round(10*Math.max(0,1-M.testM.mape/80)),10],
+    ["Rigor: opción dentro del rango de los ensayos",ch.extrap?0:5,5],
+    ["Rigor: 3 o más modelos comparados",MODELS.length>=3?5:0,5]
+  ];
+  if(fpos) parts.push(["Penalización por falso positivo",-10,0]);
+  const total=Math.max(0,Math.min(100,parts.reduce((a,p)=>a+p[1],0)));
+  return {total,parts,ok,ch,fpos};
+}
+function reveal(){
+  if(!OPT || OPT.revealed || $("o-reveal").disabled) return;
+  OPT.revealed=true; renderOpt(); renderVerdict();
+  const sc=computeScore(); const rt=RETOS.find(r=>r.id===OPT.reto)||RETOS[RETOS.length-1];
+  LAST={team:teamName()||"Equipo sin nombre",scenario:rt.id,scenarioName:rt.name,score:sc.total,mat:sc.ch.mat.name,f:sc.ch.f,model:OPT.M.name,ts:Date.now(),parts:sc.parts,ok:sc.ok,fpos:sc.fpos,real:sc.ch.real,meta:OPT.meta};
+  RESULTS_MINE.push(LAST);
+  LOCAL_RANK.push({team:LAST.team,scenario:LAST.scenario,score:LAST.score,mat:LAST.mat,f:LAST.f,model:LAST.model,ts:LAST.ts,mine:true}); store("labva-rank",LOCAL_RANK);
+  publishResult();
+  $("o-verdict").insertAdjacentHTML("beforeend",`<p class="msg good" style="margin-top:8px">Tu puntaje en este escenario: <b>${sc.total} de 100</b>. Pasa a Resultados para ver el desglose y el ranking.</p>`);
+  gateReveal(); updateMissions();
+}
+function resultLine(r){ return ["LABVA",r.team.replace(/\|/g,"/"),r.scenario,r.score,r.mat.replace(/\|/g,"/"),r.f,r.model.replace(/\|/g,"/"),r.ts].join("|"); }
+function renderScore(){
+  const box=$("rk-score");
+  if(!LAST){ box.innerHTML=`<h3>Tu puntaje ${H("puntaje")}</h3><div class="empty">Completa la misión 4 (Decidir) para obtener tu puntaje.</div>`; return; }
+  const r=LAST;
+  box.innerHTML=`<h3>Tu puntaje ${H("puntaje")}</h3>
+    <div class="muted">${esc(r.team)} · ${esc(r.scenarioName)}</div>
+    <div class="score-big" id="rk-num">0</div>
+    <div>${r.ok?`<span class="chip good">Cumple la meta: vida real ${daysText(r.real)}</span>`:`<span class="chip bad">No cumple: vida real ${daysText(r.real)} de ${fmt(r.meta)} días</span>`}</div>
+    <div class="muted">Elegiste ${esc(r.mat)}, calibre ×${fmt(r.f,1)}, con ${esc(r.model)}.</div>
+    <div class="stack" style="gap:8px">${r.parts.map(p=>`<div class="score-row ${p[1]<0?"neg":""}"><span>${esc(p[0])}</span><span style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">${p[1]>0?"+":""}${p[1]}${p[2]?" / "+p[2]:""}</span><div class="pbar"><i style="width:${p[2]?Math.max(0,p[1])/p[2]*100:100}%"></i></div></div>`).join("")}</div>
+    <div class="btns"><button class="btn" id="rk-again">Probar otro escenario</button><button class="btn ghost" id="rk-copy">Copiar mi resultado</button></div>`;
+  $("rk-again").onclick=()=>showView("opt");
+  $("rk-copy").onclick=e=>copyText(resultLine(r),e.target);
+  const numEl=$("rk-num");
+  if(REDUCED){ numEl.textContent=r.score; return; }
+  let st=null; const step=ts=>{ if(st===null) st=ts; const k=Math.min(1,(ts-st)/900); numEl.textContent=Math.round(r.score*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(step); }; requestAnimationFrame(step);
+}
+
+// ---------------- Ranking en línea (Cloudflare Pages + D1) ----------------
+const GRUPO=(()=>{ try{ const g=new URLSearchParams(location.search).get("grupo"); return (g||"general").replace(/[^A-Za-z0-9_\-. ]/g,"").slice(0,40)||"general"; }catch(e){ return "general"; } })();
+const SHARED={state:"connecting",entries:[],needCode:false,lastError:"",published:{}};
+async function fetchRanking(){
+  try{
+    const r=await fetch("/api/ranking?grupo="+encodeURIComponent(GRUPO),{cache:"no-store"});
+    if(!r.ok) throw new Error("http "+r.status);
+    const d=await r.json(); if(!d||!Array.isArray(d.entradas)) throw new Error("formato");
+    SHARED.state="on"; SHARED.needCode=!!d.requiereCodigo;
+    SHARED.entries=d.entradas.map(e=>({team:String(e.equipo||"Equipo").slice(0,40),scenario:String(e.escenario||"").slice(0,20),score:Math.max(0,Math.min(100,Math.round(+e.puntaje||0))),mat:String(e.material||"").slice(0,60),f:+e.calibre||0,model:String(e.modelo||"").slice(0,40),ts:+e.creado||0}));
+  }catch(e){ if(SHARED.state!=="on") SHARED.state="off"; else SHARED.lastError="No se pudo actualizar el ranking; se reintentará en unos segundos."; }
+  $("code-f").hidden=!(SHARED.state==="on"&&SHARED.needCode);
+  renderRank();
+}
+function initShared(){ fetchRanking(); setInterval(()=>{ if(SHARED.state==="on" && CURRENT==="rank" && !document.hidden) fetchRanking(); },10000); }
+async function publishResult(){
+  if(SHARED.state!=="on" || !LAST || SHARED.published[LAST.ts]) return;
+  const code=$("rk-code").value.trim();
+  if(SHARED.needCode && !code){ SHARED.lastError="Escribe el código de la clase (arriba, junto al nombre del equipo) y presiona Publicar mi resultado."; renderRank(); return; }
+  try{
+    const r=await fetch("/api/ranking",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({grupo:GRUPO,equipo:LAST.team,escenario:LAST.scenario,puntaje:LAST.score,material:LAST.mat,calibre:LAST.f,modelo:LAST.model,codigo:code})});
+    if(r.status===403) SHARED.lastError="El código de la clase no es correcto. Pídelo a tu docente y presiona Publicar mi resultado.";
+    else if(!r.ok) SHARED.lastError="No se pudo publicar tu resultado. Intenta de nuevo con Publicar mi resultado.";
+    else { SHARED.lastError=""; SHARED.published[LAST.ts]=true; }
+  }catch(e){ SHARED.lastError="Sin conexión con el servidor. Intenta de nuevo con Publicar mi resultado."; }
+  fetchRanking();
+}
+async function wipeGroup(){
+  const code=$("rk-admin-code").value;
+  try{ const r=await fetch("/api/ranking?grupo="+encodeURIComponent(GRUPO),{method:"DELETE",headers:{"x-admin-code":code}});
+    const d=await r.json().catch(()=>({}));
+    $("rk-msg").innerHTML = r.ok ? `<p class="msg good">Se borró el ranking en línea del grupo «${esc(GRUPO)}» (${d.borrados??0} resultados).</p>` : `<p class="msg bad">${esc(d.error||"No se pudo borrar el ranking.")}</p>`;
+  }catch(e){ $("rk-msg").innerHTML=`<p class="msg bad">Sin conexión con el servidor.</p>`; }
+  fetchRanking();
+}
+function renderRank(){
+  if(!$("rk-table")) return;
+  renderScore();
+  const scen=$("rk-scen").value||"all";
+  let list, status;
+  if(SHARED.state==="on"){
+    list=SHARED.entries;
+    status = `Ranking en línea del grupo «${GRUPO}»: muestra el mejor puntaje de cada equipo por escenario y se actualiza cada 10 segundos.` + (SHARED.lastError?" "+SHARED.lastError:"");
+    const extra=LOCAL_RANK.filter(r=>!r.mine);
+    if(extra.length){ list=list.concat(extra); status+=" También se muestran los resultados pegados por el docente."; }
+  } else if(SHARED.state==="connecting"){ list=LOCAL_RANK; status="Conectando con el ranking en línea…"; }
+  else { list=LOCAL_RANK; status="Ranking de este navegador. Para reunir a todos los equipos, cada uno copia su resultado y el docente lo pega abajo."; }
+  // mejor por equipo y escenario
+  const best={}; list.forEach(r=>{ const k=r.team+"|"+r.scenario; if(!best[k]||r.score>best[k].score||(r.score===best[k].score&&r.ts<best[k].ts)) best[k]=r; });
+  let rows=Object.values(best).filter(r=>scen==="all"||r.scenario===scen).sort((a,b)=>b.score-a.score||a.ts-b.ts);
+  $("rk-status").textContent=status;
+  $("rk-publish").hidden=!(SHARED.state==="on" && LAST && !SHARED.published[LAST.ts]);
+  $("rk-admin").hidden=!(SHARED.state==="on" && $("teacher").checked);
+  const me=teamName()||"Equipo sin nombre";
+  $("rk-table").innerHTML = rows.length ? `<tr><th>#</th><th>Equipo</th><th>Escenario</th><th class="num">Puntaje</th><th>Envase elegido</th><th>Modelo</th></tr>`+
+    rows.slice(0,50).map((r,i)=>{ const rt=RETOS.find(x=>x.id===r.scenario); const medal=i<3?`<span class="chip ${["good","warn","neutral"][i]}">${i+1}</span>`:`<span class="rk-pos">${i+1}</span>`;
+      return `<tr class="${r.team===me?"me":""}"><td>${medal}</td><td>${esc(r.team)}</td><td>${esc(rt?rt.name:r.scenario)}</td><td class="num"><b>${r.score}</b></td><td>${esc(r.mat)} ×${fmt(r.f,1)}</td><td>${esc(r.model)}</td></tr>`; }).join("")
+    : `<tr><td class="muted">Todavía no hay resultados${scen!=="all"?" en este escenario":""}.</td></tr>`;
+}
+function addPasted(){
+  const lines=$("rk-paste").value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean); let ok=0,bad=0;
+  lines.forEach(l=>{ const f=l.split("|"); if(f[0]!=="LABVA"||f.length<8){ bad++; return; } const sc=Math.round(+f[3]); if(!Number.isFinite(sc)){ bad++; return; }
+    LOCAL_RANK.push({team:f[1].slice(0,40)||"Equipo",scenario:f[2].slice(0,20),score:Math.max(0,Math.min(100,sc)),mat:f[4].slice(0,60),f:+f[5]||0,model:f[6].slice(0,40),ts:+f[7]||Date.now(),mine:false}); ok++; });
+  store("labva-rank",LOCAL_RANK); $("rk-paste").value="";
+  $("rk-msg").innerHTML=`<p class="msg ${bad?"warn":"good"}">Se agregaron ${ok} resultado(s).${bad?" "+bad+" línea(s) no tenían el formato LABVA|… y se omitieron.":""}</p>`;
+  renderRank();
+}
+
+// ---------------- Arranque ----------------
+document.querySelectorAll('.step').forEach(b=>b.addEventListener("click",()=>{ const i=VIEWS.indexOf(b.dataset.view); if(!unlocked(i)){ const m=$("mission"); m.classList.remove("fade"); void m.offsetWidth; m.classList.add("fade"); return; } showView(b.dataset.view); }));
+$("go-ref").addEventListener("click",()=>showView("ref"));
+$("teacher").addEventListener("change",updateMissions);
+$("team").value=load("labva-team","");
+$("team").addEventListener("input",()=>{ store("labva-team",$("team").value); updateMissions(); });
+$("s-play").addEventListener("click",play);
+$("s-day").addEventListener("input",e=>{ stopPlay(); setSimDay(+e.target.value); });
+$("d-hyp").innerHTML=`<option value="">Elige una variable…</option>`+FEATS.filter(f=>f.id!=="cw"&&f.id!=="co").map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join("");
+$("d-hyp").addEventListener("change",e=>{ FLAGS.hyp=e.target.value; updateMissions(); });
+$("m-log-t").addEventListener("change",e=>{ if(e.target.name==="champ"){ CHAMP=+e.target.value; renderLog(); refreshModelSelect(); drawModelCompare(); updateMissions(); } });
+$("o-just").addEventListener("input",gateReveal);
+$("rk-scen").innerHTML=`<option value="all">Todos</option>`+RETOS.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("");
+$("rk-scen").addEventListener("change",renderRank);
+$("rk-add").addEventListener("click",addPasted);
+$("rk-publish").addEventListener("click",()=>{ if(LAST) SHARED.published[LAST.ts]=false; publishResult(); });
+$("rk-wipe").addEventListener("click",wipeGroup);
+$("rk-code").value=load("labva-code","");
+$("rk-code").addEventListener("input",()=>store("labva-code",$("rk-code").value.trim()));
+$("teacher").addEventListener("change",renderRank);
+$("rk-clear").addEventListener("click",()=>{ LOCAL_RANK=[]; store("labva-rank",LOCAL_RANK); $("rk-msg").innerHTML=`<p class="msg good">Se borró el ranking de este navegador.</p>`; renderRank(); });
+
+fillSelect($("s-prod"),PRODUCTS,"pinole"); fillSelect($("s-mat"),MATERIALS,"bopp");
+fillSelect($("s-clim"),CLIMATES.concat([{id:"custom",name:"Personalizado"}]),"tez");
+loadProdDefaults("s","pinole");
+const tez=CLIMATES[0]; $("s-T").value=tez.T; $("s-HR").value=tez.HR;
+$("s-prod").addEventListener("change",()=>{ loadProdDefaults("s",$("s-prod").value); renderSim(); });
+["s-mat","s-f","s-mass","s-w","s-h","s-n2"].forEach(id=>$(id).addEventListener("input",renderSim));
+$("s-clim").addEventListener("change",()=>{ const c=CLIMATES.find(x=>x.id===$("s-clim").value); if(c){ $("s-T").value=c.T; $("s-HR").value=c.HR; } renderSim(); });
+["s-T","s-HR"].forEach(id=>$(id).addEventListener("input",()=>{ $("s-clim").value="custom"; renderSim(); }));
+$("s-add").addEventListener("click",()=>{ const c=simCfg(), r=physics(c), m=matById(c.mat); cmpRows.push({prod:prodById(c.prod).name,mat:m.name,f:c.f,mass:c.mass,T:c.T,HR:c.HR,n2:c.n2,t:r.t,limit:r.limit,cost:r.cost,eol:m.eol}); renderCmp(); });
+$("s-cmp").addEventListener("click",e=>{ const i=e.target.getAttribute("data-del"); if(i!==null){ cmpRows.splice(+i,1); renderCmp(); } });
+$("s-clear").addEventListener("click",()=>{ cmpRows.length=0; renderCmp(); });
+$("s-copy").addEventListener("click",e=>copyText(tableToTSV($("s-cmp")),e.target));
+
+renderDataMats();
+const syncD=()=>{ $("d-n-v").textContent=$("d-n").value; $("d-noise-v").textContent=$("d-noise").value+" %"; };
+["d-n","d-noise"].forEach(id=>$(id).addEventListener("input",syncD)); syncD();
+$("d-gen").addEventListener("click",generate);
+$("d-copy").addEventListener("click",e=>copyText(dataCSV(),e.target));
+
+$("m-feats").innerHTML=FEATS.map(f=>`<label class="check"><input type="checkbox" id="feat-${f.id}" ${f.def?"checked":""}><span>${f.name}<small>${f.d}</small></span></label>`).join("");
+$("m-alg").addEventListener("change",renderHP); renderHP();
+$("m-val").addEventListener("change",()=>{ const cv=$("m-val").value==="cv"; $("m-split-f").classList.toggle("hidden",cv); $("m-k-f").classList.toggle("hidden",!cv); });
+const syncM=()=>{ $("m-split-v").textContent=$("m-split").value+" %"; $("m-k-v").textContent=$("m-k").value; };
+["m-split","m-k"].forEach(id=>$(id).addEventListener("input",syncM)); syncM();
+$("m-train").addEventListener("click",trainModel);
+$("m-copy").addEventListener("click",e=>copyText(tableToTSV($("m-log-t")),e.target));
+
+fillSelect($("o-reto"),RETOS,"r1"); fillSelect($("o-prod"),PRODUCTS,"pinole");
+$("o-reto").addEventListener("change",loadReto); loadReto();
+$("o-run").addEventListener("click",runOpt);
+$("o-reveal").addEventListener("click",reveal);
+$("o-copy").addEventListener("click",e=>copyText(tableToTSV($("o-table"))+"\n\nJustificación:\t"+$("o-just").value,e.target));
+$("r-reset").addEventListener("click",()=>{ PRODUCTS.splice(0,PRODUCTS.length,...JSON.parse(JSON.stringify(PRODUCTS_DEFAULT))); resetWork("Se restablecieron los productos: genere ensayos otra vez y vuelva a entrenar."); refreshProductSelects(); loadProdDefaults("s",$("s-prod").value); renderRef(); renderSim(); loadReto(); msg("r-prod-msg","good","Productos restablecidos a los valores originales."); });
+$("r-mat-reset").addEventListener("click",()=>{ MATERIALS.splice(0,MATERIALS.length,...JSON.parse(JSON.stringify(MATERIALS_DEFAULT))); resetWork("Se restablecieron los materiales: genere ensayos otra vez y vuelva a entrenar."); refreshMaterialViews(true); msg("r-mat-msg","good","Materiales restablecidos a los valores originales."); });
+$("r-mat-file").addEventListener("change",e=>readFile(e.target,loadMaterialsCSV));
+$("r-prod-file").addEventListener("change",e=>readFile(e.target,loadProductsCSV));
+["r-mat-file","r-prod-file"].forEach(id=>{ const lab=document.querySelector(`label[for="${id}"]`); lab.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); $(id).click(); } }); });
+$("r-mat-copy").addEventListener("click",e=>copyText(materialsCSV(),e.target));
+$("r-prod-copy").addEventListener("click",e=>copyText(productsCSV(),e.target));
+$("r-tpl-mat").addEventListener("click",e=>copyText("nombre,espesor_um,wvtr,otr,costo_m2,fin_de_vida,clase\nMi material,25,5,1500,3.5,Reciclable,reciclable",e.target));
+$("r-tpl-prod").addEventListener("click",e=>copyText("nombre,humedad_inicial,humedad_critica,m0,b,tmax_oxidacion,umbral_oxidacion,contenido_g,ancho_cm,alto_cm\nMi producto,0.05,0.10,0.03,0.18,365,80,250,15,20",e.target));
+$("r-mat-add").addEventListener("click",()=>{ const used=new Set(MATERIALS.map(m=>m.id)); MATERIALS.push({id:slug("material_nuevo",used),name:"Material nuevo",th:25,wvtr:5,otr:1500,cost:3.5,eol:"Sin dato",cls:"warn"}); refreshMaterialViews(true); msg("r-mat-msg","good","Fila agregada al final: edite sus valores. Para que el modelo la conozca, genere ensayos de nuevo."); });
+$("r-prod-add").addEventListener("click",()=>{ const used=new Set(PRODUCTS.map(p=>p.id)); PRODUCTS.push({id:slug("producto_nuevo",used),name:"Producto nuevo",mi:0.05,mc:0.10,m0:0.03,b:0.18,tmax:365,thr:80,mass:250,w:15,h:20}); resetWork("Cambió la lista de productos: genere ensayos otra vez y vuelva a entrenar."); refreshProductSelects(); renderRef(); msg("r-prod-msg","good","Fila agregada al final: edite sus valores. Los ensayos y modelos anteriores se borraron porque cambió la lista de productos."); });
+$("r-mats").addEventListener("click",e=>{ const i=e.target.getAttribute("data-mdel"); if(i===null||MATERIALS.length<2) return; const gone=MATERIALS[+i]; MATERIALS.splice(+i,1); resetWork("Cambió la lista de materiales: genere ensayos otra vez y vuelva a entrenar."); refreshMaterialViews(true); msg("r-mat-msg","warn",`Se quitó ${esc(gone.name)}. Los ensayos y modelos anteriores se borraron.`); });
+$("r-prods").addEventListener("click",e=>{ const i=e.target.getAttribute("data-pdel"); if(i===null||PRODUCTS.length<2) return; const gone=PRODUCTS[+i]; PRODUCTS.splice(+i,1); resetWork("Cambió la lista de productos: genere ensayos otra vez y vuelva a entrenar."); refreshProductSelects(); loadProdDefaults("s",$("s-prod").value); renderRef(); renderSim(); loadReto(); msg("r-prod-msg","warn",`Se quitó ${esc(gone.name)}. Los ensayos y modelos anteriores se borraron.`); });
+
+addLabelHelp();
+renderSim(); renderCmp(); renderRef(); renderData(); renderLog(); drawModelCompare(); refreshModelSelect();
+$("m-tiles").innerHTML=`<div class="empty">Elige variables, algoritmo y validación, y presiona <b>Entrenar y validar</b>.</div>`;
+$("o-tiles").innerHTML=`<div class="empty">Elige un escenario y presiona <b>Predecir y ordenar opciones</b>.</div>`;
+gateReveal(); showView("sim"); renderRank();
+initShared();
+</script>
+</body>
+</html>

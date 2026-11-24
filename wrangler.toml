@@ -1,0 +1,9 @@
+# Solo se usa si despliega con la herramienta Wrangler (opción B del README).
+name = "laboratorio-vida-anaquel"
+pages_build_output_dir = "./public"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "laboratorio-ranking"
+database_id = "REEMPLACE_CON_EL_ID_DE_SU_BASE_D1"
