@@ -160,6 +160,7 @@ tr.hi td{background:var(--accent-soft)}
 .score-big{font:800 72px/1 var(--font-display);font-variant-numeric:tabular-nums;color:var(--accent)}
 .score-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;font-size:14px}
 .score-row .pbar{grid-column:1/-1}
+.score-why{grid-column:1/-1;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
 .score-row .pbar>i{background:var(--series-3)}
 .score-row.neg .pbar>i{background:var(--bad)}
 .rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
@@ -1239,7 +1240,7 @@ const HELP={
   margen:["Margen de seguridad","Exige que la predicción supere la meta por un porcentaje extra, para cubrir el error del modelo."],
   meta:["Meta","Días mínimos de vida de anaquel que pide el cliente."],
   fp:["Falso positivo","El modelo dijo que el envase cumple y en realidad no. Es el error más caro: producto echado a perder en el anaquel."],
-  puntaje:["Puntaje","Hasta 100 puntos: cumplir la meta real (40), costo frente a la mejor opción (25), fin de vida (15), calidad del modelo (10) y rigor (10). Un falso positivo resta 10."]
+  puntaje:["Puntaje","Hasta 100 puntos: cumplir la meta real (40), costo frente a la mejor opción (25), fin de vida (15), calidad del modelo (10) y rigor (10). Un falso positivo resta 10. La calidad del modelo no premia ganar entre sus modelos: depende del error típico en prueba (0 % = 10 puntos, 80 % o más = 0)."]
 };
 function H(k){ return HELP[k]?`<button class="help" type="button" data-help="${k}" aria-label="Ayuda: ${esc(HELP[k][0])}">?</button>`:""; }
 const HELP_TARGETS={"s-mat":"material","s-f":"calibre","s-mass":"contenido","s-n2":"atm","s-clim":"clima","s-HR":"hr","d-hyp":"hyp","d-n":"ensayos","d-noise":"ruido","d-tmin":"rangos","d-seed":"semilla","m-alg":"alg","m-val":"validacion","o-meta":"meta","o-margin":"margen","o-eol":"fin","o-model":"campeon"};
@@ -1386,16 +1387,32 @@ function computeScore(){
   const {rows,meta,need,M}=OPT; const ch=rows.find(r=>r.chosen);
   const ok=ch.real>=meta; const feas=rows.filter(r=>r.real>=meta);
   const minCost=feas.length?Math.min(...feas.map(r=>r.cost)):null;
+  const cheap=feas.find(r=>r.cost===minCost);
   const fpos=ch.pred>=need && !ok;
+  const mape=M.testM.mape, mq=Math.round(10*Math.max(0,1-mape/80));
+  const money=x=>"$"+fmt(x,2);
+  const why={
+    meta: ok?`La vida real (${daysText(ch.real)}) alcanza la meta de ${fmt(meta)} días.`
+            :`La vida real (${daysText(ch.real)}) no alcanza la meta de ${fmt(meta)} días. Sin meta cumplida tampoco se suman costo ni fin de vida.`,
+    cost: !ok?"Solo cuenta si el envase cumple la meta real."
+          : ch.cost<=minCost+1e-9?`Es la opción más barata que cumple la meta (${money(ch.cost)} por envase).`
+          : `Su envase cuesta ${money(ch.cost)}; el más barato que cumplía era ${esc(cheap.mat.name)} ×${fmt(cheap.f,2)} a ${money(minCost)}. Puntos = 25 × ${money(minCost)} ÷ ${money(ch.cost)}.`,
+    eol: !ok?"Solo cuenta si el envase cumple la meta real."
+          : `${esc(ch.mat.eol||"Fin de vida no indicado")} → ${({good:15,warn:7,bad:0})[ch.mat.cls]||0} de 15 puntos. Reciclable o compostable da 15; difícil de reciclar, 7; no reciclable, 0.`,
+    model:`No premia ganar entre sus modelos, sino qué tan exacto es: el modelo que usaron tuvo un error típico de ${fmt(mape)} % en prueba. Con 0 % serían 10 puntos y con 80 % o más, 0. Cálculo: 10 × (1 − ${fmt(mape)} ÷ 80) = ${mq}. Para subir: más ensayos, mejores variables o menos error experimental.`,
+    extrap: ch.extrap?"La opción elegida extrapola: el modelo no tenía ensayos parecidos, así que su predicción era poco confiable."
+          :"La opción elegida está dentro del rango de lo que el modelo vio en los ensayos.",
+    nmod: MODELS.length>=3?`Compararon ${MODELS.length} modelos antes de decidir.`:`Solo compararon ${MODELS.length} modelo${MODELS.length===1?"":"s"}; se necesitan 3 o más.`
+  };
   const parts=[
-    ["Cumple la meta real",ok?40:0,40],
-    ["Costo frente a la opción real más barata",ok&&minCost?Math.round(25*minCost/ch.cost):0,25],
-    ["Fin de vida del envase",ok?({good:15,warn:7,bad:0}[ch.mat.cls]):0,15],
-    ["Calidad del modelo usado",Math.round(10*Math.max(0,1-M.testM.mape/80)),10],
-    ["Rigor: opción dentro del rango de los ensayos",ch.extrap?0:5,5],
-    ["Rigor: 3 o más modelos comparados",MODELS.length>=3?5:0,5]
+    ["Cumple la meta real",ok?40:0,40,why.meta],
+    ["Costo frente a la opción real más barata",ok&&minCost?Math.round(25*minCost/ch.cost):0,25,why.cost],
+    ["Fin de vida del envase",ok?({good:15,warn:7,bad:0}[ch.mat.cls]):0,15,why.eol],
+    ["Calidad del modelo usado",mq,10,why.model],
+    ["Rigor: opción dentro del rango de los ensayos",ch.extrap?0:5,5,why.extrap],
+    ["Rigor: 3 o más modelos comparados",MODELS.length>=3?5:0,5,why.nmod]
   ];
-  if(fpos) parts.push(["Penalización por falso positivo",-10,0]);
+  if(fpos) parts.push(["Penalización por falso positivo",-10,0,"El modelo predijo que cumplía la meta con su margen de seguridad, pero en la realidad no la cumplió."]);
   const total=Math.max(0,Math.min(100,parts.reduce((a,p)=>a+p[1],0)));
   return {total,parts,ok,ch,fpos};
 }
@@ -1420,7 +1437,8 @@ function renderScore(){
     <div class="score-big" id="rk-num">0</div>
     <div>${r.ok?`<span class="chip good">Cumple la meta: vida real ${daysText(r.real)}</span>`:`<span class="chip bad">No cumple: vida real ${daysText(r.real)} de ${fmt(r.meta)} días</span>`}</div>
     <div class="muted">Elegiste ${esc(r.mat)}, calibre ×${fmt(r.f,1)}, con ${esc(r.model)}.</div>
-    <div class="stack" style="gap:8px">${r.parts.map(p=>`<div class="score-row ${p[1]<0?"neg":""}"><span>${esc(p[0])}</span><span style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">${p[1]>0?"+":""}${p[1]}${p[2]?" / "+p[2]:""}</span><div class="pbar"><i style="width:${p[2]?Math.max(0,p[1])/p[2]*100:100}%"></i></div></div>`).join("")}</div>
+    <div class="stack" style="gap:8px">${r.parts.map(p=>`<div class="score-row ${p[1]<0?"neg":""}"><span>${esc(p[0])}</span><span style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">${p[1]>0?"+":""}${p[1]}${p[2]?" / "+p[2]:""}</span><div class="pbar"><i style="width:${p[2]?Math.max(0,p[1])/p[2]*100:100}%"></i></div>${p[3]?`<div class="score-why">${p[3]}</div>`:""}</div>`).join("")}</div>
+    <p class="muted" style="font-size:13px">El puntaje no mide solo si su modelo ganó: premia la decisión final (cumplir la meta al menor costo y con buen fin de vida) y qué tan confiable era el modelo con que la tomaron.</p>
     <div class="btns"><button class="btn" id="rk-again">Probar otro escenario</button><button class="btn ghost" id="rk-copy">Copiar mi resultado</button></div>`;
   $("rk-again").onclick=()=>showView("opt");
   $("rk-copy").onclick=e=>copyText(resultLine(r),e.target);
