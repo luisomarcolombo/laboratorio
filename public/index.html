@@ -162,6 +162,10 @@ tr.hi td{background:var(--accent-soft)}
 .score-row .pbar{grid-column:1/-1}
 .score-row .pbar>i{background:var(--series-3)}
 .score-row.neg .pbar>i{background:var(--bad)}
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.rec-grid .btns{margin-top:auto}
+.eyebrow-s{font:600 12px var(--font-mono);color:var(--accent);letter-spacing:.05em;text-transform:uppercase}
+a.btn{text-decoration:none;display:inline-block}
 .rk-pos{font:800 16px var(--font-display);width:28px;display:inline-grid;place-items:center}
 tr.me td{background:var(--accent-soft)}
 .empty{border:1px dashed var(--line);border-radius:var(--radius);padding:18px;color:var(--ink-2);background:var(--surface)}
@@ -181,6 +185,7 @@ tr.me td{background:var(--accent-soft)}
     <div class="field team"><label for="team">Equipo</label><input type="text" id="team" maxlength="40" placeholder="Nombre de tu equipo" autocomplete="off"></div>
     <div class="field" id="code-f" hidden style="min-width:160px"><label for="rk-code">Código de la clase</label><input type="text" id="rk-code" maxlength="40" autocomplete="off" placeholder="Te lo da tu docente"></div>
     <label class="check"><input type="checkbox" id="teacher"><span>Modo docente<small>Desbloquea todas las etapas</small></span></label>
+    <button class="btn ghost" id="go-rec">Recursos</button>
     <button class="btn ghost" id="go-ref">Ayuda y datos</button>
   </div>
 </header>
@@ -413,6 +418,29 @@ tr.me td{background:var(--accent-soft)}
 </section>
 
 <!-- ============ 5 REFERENCIA ============ -->
+<section id="view-recursos" class="hidden">
+  <div class="rec-grid">
+    <article class="card stack">
+      <div class="eyebrow-s">PDF · 6 páginas · carta</div>
+      <h2>Guía del ejercicio</h2>
+      <p class="muted">El ejercicio de 70 minutos paso a paso: el caso del pinole de maíz azul, el cronograma, qué hacer en cada etapa, las preguntas P1 a P12 y la Hoja de respuestas para imprimir.</p>
+      <div class="btns"><a class="btn" href="recursos/guia-ejercicio.pdf" download>Descargar PDF</a><a class="btn ghost" href="recursos/guia-ejercicio.pdf" target="_blank" rel="noopener">Abrir</a></div>
+    </article>
+    <article class="card stack">
+      <div class="eyebrow-s">PDF · 5 páginas · carta</div>
+      <h2>Guía del estudiante</h2>
+      <p class="muted">Cómo funciona cada pantalla del laboratorio, cómo leer las métricas, cómo se calcula el puntaje y respuestas a las dudas frecuentes.</p>
+      <div class="btns"><a class="btn" href="recursos/guia-estudiante.pdf" download>Descargar PDF</a><a class="btn ghost" href="recursos/guia-estudiante.pdf" target="_blank" rel="noopener">Abrir</a></div>
+    </article>
+    <article class="card stack">
+      <div class="eyebrow-s">CSV · para Excel</div>
+      <h2>Plantillas de datos</h2>
+      <p class="muted">Los materiales y productos del laboratorio en el formato que acepta Ayuda y datos. Ábrelas en Excel, cambia los valores por los de tus fichas técnicas o tu laboratorio y vuelve a cargarlas.</p>
+      <div class="btns"><a class="btn ghost" href="recursos/plantilla-materiales.csv" download>Materiales (CSV)</a><a class="btn ghost" href="recursos/plantilla-productos.csv" download>Productos (CSV)</a></div>
+    </article>
+  </div>
+</section>
+
 <section id="view-ref" class="hidden">
   <div class="stack">
     <div class="card stack">
@@ -1258,8 +1286,10 @@ function updateMissions(){
   });
   $("prog").style.width=(totTasks?doneTasks/totTasks*100:0)+"%";
   const box=$("mission");
-  if(CURRENT==="ref"){
-    box.innerHTML=`<div><div class="eyebrow">Ayuda y datos</div><h2>Materiales, productos y conceptos</h2><p>Consulta o edita los datos del laboratorio, carga tus propios CSV y repasa cómo leer las métricas.</p></div><div><button class="btn big" id="mis-back">Volver a la misión</button></div>`;
+  if(CURRENT==="ref" || CURRENT==="recursos"){
+    box.innerHTML = CURRENT==="ref"
+      ? `<div><div class="eyebrow">Ayuda y datos</div><h2>Materiales, productos y conceptos</h2><p>Consulta o edita los datos del laboratorio, carga tus propios CSV y repasa cómo leer las métricas.</p></div><div><button class="btn big" id="mis-back">Volver a la misión</button></div>`
+      : `<div><div class="eyebrow">Recursos</div><h2>Guías y plantillas para descargar</h2><p>Descarga la Guía del ejercicio para seguir la práctica, la Guía del estudiante para consultar cómo funciona cada pantalla, y las plantillas CSV de datos.</p></div><div><button class="btn big" id="mis-back">Volver a la misión</button></div>`;
     $("mis-back").onclick=()=>showView(LASTMISSION); return;
   }
   const i=VIEWS.indexOf(CURRENT), m=MISSIONS[i], dn=missionDone(i);
@@ -1274,7 +1304,7 @@ function showView(v){
   const i=VIEWS.indexOf(v);
   if(i>=0 && !unlocked(i)) return;
   CURRENT=v; if(i>=0) LASTMISSION=v;
-  ["sim","datos","modelo","opt","rank","ref"].forEach(x=>$("view-"+x).classList.toggle("hidden",x!==v));
+  ["sim","datos","modelo","opt","rank","ref","recursos"].forEach(x=>$("view-"+x).classList.toggle("hidden",x!==v));
   const sec=$("view-"+v); sec.classList.remove("fade"); void sec.offsetWidth; sec.classList.add("fade");
   hideTip(); closePop(); stopPlay();
   if(v==="rank") renderRank();
@@ -1470,6 +1500,7 @@ function addPasted(){
 // ---------------- Arranque ----------------
 document.querySelectorAll('.step').forEach(b=>b.addEventListener("click",()=>{ const i=VIEWS.indexOf(b.dataset.view); if(!unlocked(i)){ const m=$("mission"); m.classList.remove("fade"); void m.offsetWidth; m.classList.add("fade"); return; } showView(b.dataset.view); }));
 $("go-ref").addEventListener("click",()=>showView("ref"));
+$("go-rec").addEventListener("click",()=>showView("recursos"));
 $("teacher").addEventListener("change",updateMissions);
 $("team").value=load("labva-team","");
 $("team").addEventListener("input",()=>{ store("labva-team",$("team").value); updateMissions(); });

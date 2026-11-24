@@ -1,0 +1,5 @@
+﻿nombre,humedad_inicial,humedad_critica,m0,b,tmax_oxidacion,umbral_oxidacion,contenido_g,ancho_cm,alto_cm
+Pinole de maíz azul,0.055,0.10,0.03,0.18,365,80,250,15,20
+Café molido,0.03,0.06,0.01,0.12,450,2,500,14,24
+Totopos,0.02,0.05,0.005,0.12,240,150,200,18,25
+Harina de grillo,0.05,0.10,0.02,0.20,300,40,250,15,20
