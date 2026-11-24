@@ -401,7 +401,7 @@ tr.me td{background:var(--accent-soft)}
         <div class="btns"><button class="btn" id="rk-publish" hidden>Publicar mi resultado</button></div>
         <div class="tablewrap"><table id="rk-table"></table></div>
       </div>
-      <div class="card stack">
+      <div class="card stack" id="rk-teacher" hidden>
         <h3>Consolidar resultados (docente)</h3>
         <p class="muted">Si el ranking no está en línea (por ejemplo, al abrir la página desde un archivo), cada equipo presiona "Copiar mi resultado" y te lo envía. Pega aquí todas las líneas, una por equipo, para armar el ranking en esta pantalla.</p>
         <textarea id="rk-paste" rows="4" placeholder="LABVA|Equipo Maíz|r1|78|BOPP metalizado 20 µm|1|M3 · Bosque aleatorio|1795440000000"></textarea>
@@ -1475,13 +1475,13 @@ function renderRank(){
     const extra=LOCAL_RANK.filter(r=>!r.mine);
     if(extra.length){ list=list.concat(extra); status+=" También se muestran los resultados pegados por el docente."; }
   } else if(SHARED.state==="connecting"){ list=LOCAL_RANK; status="Conectando con el ranking en línea…"; }
-  else { list=LOCAL_RANK; status="Ranking de este navegador. Para reunir a todos los equipos, cada uno copia su resultado y el docente lo pega abajo."; }
+  else { list=LOCAL_RANK; status="Ranking de este navegador. Para reunir a todos los equipos, cada uno copia su resultado y se lo envía al docente."; }
   // mejor por equipo y escenario
   const best={}; list.forEach(r=>{ const k=r.team+"|"+r.scenario; if(!best[k]||r.score>best[k].score||(r.score===best[k].score&&r.ts<best[k].ts)) best[k]=r; });
   let rows=Object.values(best).filter(r=>scen==="all"||r.scenario===scen).sort((a,b)=>b.score-a.score||a.ts-b.ts);
   $("rk-status").textContent=status;
   $("rk-publish").hidden=!(SHARED.state==="on" && LAST && !SHARED.published[LAST.ts]);
-  $("rk-admin").hidden=!(SHARED.state==="on" && $("teacher").checked);
+  $("rk-admin").hidden=!(SHARED.state==="on" && $("teacher").checked); $("rk-teacher").hidden=!$("teacher").checked;
   const me=teamName()||"Equipo sin nombre";
   $("rk-table").innerHTML = rows.length ? `<tr><th>#</th><th>Equipo</th><th>Escenario</th><th class="num">Puntaje</th><th>Envase elegido</th><th>Modelo</th></tr>`+
     rows.slice(0,50).map((r,i)=>{ const rt=RETOS.find(x=>x.id===r.scenario); const medal=i<3?`<span class="chip ${["good","warn","neutral"][i]}">${i+1}</span>`:`<span class="rk-pos">${i+1}</span>`;
